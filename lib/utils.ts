@@ -3,7 +3,7 @@ import { type ClassValue, clsx } from 'clsx';
 import qs from 'query-string';
 import { twMerge } from 'tailwind-merge';
 import { z } from 'zod';
-import { CategoryCount, SouthAfricanProvince, Transaction, User } from '@/types';
+import { CategoryCount, SouthAfricanProvince, Transaction } from '@/types';
 
 export const SOUTH_AFRICAN_PROVINCES = [
   'Eastern Cape',
@@ -117,7 +117,7 @@ export function countTransactionCategories(transactions: Transaction[]): Categor
   const categoryCounts: Record<string, number> = {};
   let totalCount = 0;
 
-  transactions?.forEach((transaction) => {
+  transactions.forEach((transaction) => {
     categoryCounts[transaction.category] = (categoryCounts[transaction.category] ?? 0) + 1;
     totalCount += 1;
   });
@@ -237,52 +237,3 @@ export const signUpSchema = z
 
 export const authFormSchema = (type: 'sign-in' | 'sign-up') =>
   type === 'sign-up' ? signUpSchema : signInSchema;
-
-export const getMockBankAccount = (email: string) => ({
-  accountId: `demo_${email}_${Date.now()}`,
-  accountNumber: '1057428391',
-  branchCode: '470010',
-  bankName: 'Capitec Bank (Demo)',
-  balance: 12500,
-  currency: 'ZAR' as const,
-  linkedAt: new Date().toISOString(),
-});
-
-export const retrieveMockBankAccount = (email: string) => {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(`mock_bank_${email}`);
-    return stored ? JSON.parse(stored) : null;
-  }
-  return null;
-};
-
-export const getMockTransactions = (user: User) => [
-  {
-    id: `tx_${Date.now()}_1`,
-    $id: `tx_${Date.now()}_1`,
-    name: 'Woolworths Food',
-    paymentChannel: 'card',
-    type: 'debit',
-    accountId: `demo_${user.email}`,
-    amount: 486.75,
-    createdAt: new Date().toISOString(),
-    category: 'Shopping',
-    date: new Date().toISOString().split('T')[0],
-    image: '/icons/shopping-bag.svg',
-    typeIcon: '/icons/debit.svg',
-  },
-  {
-    id: `tx_${Date.now()}_2`,
-    $id: `tx_${Date.now()}_2`,
-    name: 'Demo EFT received',
-    paymentChannel: 'bank',
-    type: 'credit',
-    accountId: `demo_${user.email}`,
-    amount: 2500,
-    createdAt: new Date().toISOString(),
-    category: 'Transfer',
-    date: new Date().toISOString().split('T')[0],
-    image: '/icons/transfer.svg',
-    typeIcon: '/icons/credit.svg',
-  },
-];
