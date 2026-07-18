@@ -38,8 +38,8 @@ const formSchema = z.object({
       (value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0,
       "Enter a valid amount greater than R0.00"
     ),
-  senderBank: z.string().min(1, "Select a source account"),
-  recipientReference: z.string().trim().min(1, "Enter a demo account reference"),
+  senderBank: z.string().uuid("Select a valid source account"),
+  recipientReference: z.string().uuid("Enter a valid demo account reference"),
 });
 
 const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
@@ -51,7 +51,7 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
     defaultValues: {
       name: "",
       amount: "",
-      senderBank: accounts[0]?.appwriteItemId ?? "",
+      senderBank: accounts[0]?.id ?? "",
       recipientReference: "",
     },
   });
@@ -68,32 +68,27 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
         return;
       }
 
-      const transfer = await createMockTransfer({
+      await createMockTransfer({
         senderBankId: data.senderBank,
         receiverBankId: data.recipientReference,
         amount: Number(data.amount),
         name: data.name || "Demo transfer",
       });
 
-      if (!transfer) {
-        form.setError("root", {
-          message:
-            "The simulated transfer could not be completed. Check the account reference and demo balance.",
-        });
-        return;
-      }
-
       form.reset({
         name: "",
         amount: "",
-        senderBank: accounts[0]?.appwriteItemId ?? "",
+        senderBank: accounts[0]?.id ?? "",
         recipientReference: "",
       });
       router.push("/");
       router.refresh();
-    } catch {
+    } catch (error) {
       form.setError("root", {
-        message: "The simulated transfer failed. No real money was moved.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "The simulated transfer failed. No real money was moved.",
       });
     } finally {
       setIsLoading(false);
@@ -106,7 +101,7 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">Demo transfer only</p>
           <p className="mt-1">
-            This flow updates mock balances in Appwrite. It does not connect to a bank or move real money.
+            This flow updates SQL Server demo balances through the Kape API. It does not connect to a bank or move real money.
           </p>
         </div>
 
