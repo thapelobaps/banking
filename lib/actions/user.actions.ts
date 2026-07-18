@@ -37,7 +37,7 @@ type ApiAccount = {
 };
 
 const toUser = (user: ApiUser): User => ({
-  $id: user.id,
+  id: user.id,
   userId: user.id,
   email: user.email,
   firstName: user.firstName,
@@ -48,14 +48,12 @@ const toUser = (user: ApiUser): User => ({
 });
 
 const storeAccessToken = (response: AuthResponse) => {
-  const expiresAt = new Date(response.expiresAt);
-
   cookies().set(ACCESS_TOKEN_COOKIE, response.accessToken, {
     path: '/',
     httpOnly: true,
     sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
-    expires: expiresAt,
+    expires: new Date(response.expiresAt),
   });
 };
 
