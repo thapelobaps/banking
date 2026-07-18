@@ -97,9 +97,9 @@ const AuthForm = ({ type }: { type: 'sign-in' | 'sign-up' }) => {
     <section className="auth-form">
       <header className="flex flex-col gap-5 md:gap-8">
         <Link href="/" className="flex cursor-pointer items-center gap-1">
-          <Image src="/icons/logo.svg" width={34} height={34} alt="Horizon logo" />
+          <Image src="/icons/logo.svg" width={34} height={34} alt="Kape App logo" />
           <h1 className="text-26 font-ibm-plex-serif font-bold text-black-1">
-            Horizon
+            Kape App
           </h1>
         </Link>
         <div className="flex flex-col gap-1 md:gap-3">
