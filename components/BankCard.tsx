@@ -6,8 +6,6 @@ import Copy from './Copy'
 import { CreditCardProps } from '@/types'
 
 const BankCard = ({ account, userName, showBalance = true }: CreditCardProps) => {
-
-  console.log(account);
   return (
     <div className="flex flex-col">
       <Link href={`/transaction-history/?id=${account.appwriteItemId}`} className="bank-card">
@@ -27,7 +25,7 @@ const BankCard = ({ account, userName, showBalance = true }: CreditCardProps) =>
                 {userName}
               </h1>
               <h2 className="text-12 font-semibold text-white">
-              ●● / ●●
+                ●● / ●●
               </h2>
             </div>
             <p className="text-14 font-semibold tracking-[1.1px] text-white">
@@ -37,31 +35,33 @@ const BankCard = ({ account, userName, showBalance = true }: CreditCardProps) =>
         </div>
 
         <div className="bank-card_icon">
-          <Image 
+          <Image
             src="/icons/Paypass.svg"
             width={20}
             height={24}
-            alt="pay"
+            alt="contactless payment symbol"
           />
-          <Image 
+          <Image
             src="/icons/mastercard.svg"
             width={45}
             height={32}
-            alt="mastercard"
+            alt="card network"
             className="ml-5"
           />
         </div>
 
-        <Image 
+        <Image
           src="/icons/lines.png"
           width={316}
           height={190}
-          alt="lines"
-          className="absolute top-0 left-0"
+          alt=""
+          className="absolute left-0 top-0"
         />
       </Link>
 
-      {showBalance && <Copy title={account?.sharaebleId} />}
+      {showBalance && account.shareableId && (
+        <Copy title={account.shareableId} label="Demo account reference" />
+      )}
     </div>
   )
 }
