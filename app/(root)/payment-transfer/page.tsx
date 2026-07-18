@@ -1,28 +1,36 @@
 import HeaderBox from '@/components/HeaderBox'
 import PaymentTransferForm from '@/components/PaymentTransferForm'
-import { getAccounts } from '@/lib/actions/bank.actions';
-import { getLoggedInUser } from '@/lib/actions/user.actions';
-import React from 'react'
+import { getAccounts } from '@/lib/actions/bank.actions'
+import { getLoggedInUser } from '@/lib/actions/user.actions'
 
 const Transfer = async () => {
-  const loggedIn = await getLoggedInUser();
-  const accounts = await getAccounts({ 
-    userId: loggedIn.$id 
+  const loggedIn = await getLoggedInUser()
+
+  if (!loggedIn) {
+    return null
+  }
+
+  const accounts = await getAccounts({
+    userId: loggedIn.userId,
   })
 
-  if(!accounts) return;
-  
-  const accountsData = accounts?.data;
+  const accountsData = accounts?.data ?? []
 
   return (
     <section className="payment-transfer">
-      <HeaderBox 
-        title="Payment Transfer"
-        subtext="Please provide any specific details or notes related to the payment transfer"
+      <HeaderBox
+        title="Demo transfer"
+        subtext="Simulate a transfer between Kape App demo accounts. No real money is moved."
       />
 
       <section className="size-full pt-5">
-        <PaymentTransferForm accounts={accountsData} />
+        {accountsData.length > 0 ? (
+          <PaymentTransferForm accounts={accountsData} />
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-700">
+            Add a demo account before simulating a transfer.
+          </div>
+        )}
       </section>
     </section>
   )
