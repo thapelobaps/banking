@@ -18,6 +18,14 @@ const {
   APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
 } = process.env;
 
+const createPublicAccountClient = () => {
+  const client = new Client()
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
+
+  return new Account(client);
+};
+
 const setSessionCookie = (secret: string) => {
   cookies().set('appwrite-session', secret, {
     path: '/',
@@ -45,23 +53,22 @@ const mapAuthenticationError = (error: any, fallback: string) => {
 };
 
 export const signIn = async ({ email, password }: { email: string; password: string }) => {
-  const credentials = signInSchema.parse({ email, password });
+  const validation = signInSchema.safeParse({ email, password });
+  if (!validation.success) {
+    throw new Error(validation.error.issues[0]?.message ?? 'Invalid sign-in details.');
+  }
 
   try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
-    const account = new Account(client);
+    const account = createPublicAccountClient();
     const session = await account.createEmailPasswordSession(
-      credentials.email,
-      credentials.password
+      validation.data.email,
+      validation.data.password
     );
 
     setSessionCookie(session.secret);
 
     const user = await getUserInfo({ userId: session.userId });
     if (!user) {
-      await account.deleteSession('current').catch(() => undefined);
       cookies().delete('appwrite-session');
       throw new Error('Your profile could not be loaded. Please contact support.');
     }
@@ -82,7 +89,11 @@ export const signIn = async ({ email, password }: { email: string; password: str
 };
 
 export const signUp = async (userData: SignUpParams) => {
-  const registration = signUpSchema.parse(userData);
+  const validation = signUpSchema.safeParse(userData);
+  if (!validation.success) {
+    throw new Error(validation.error.issues[0]?.message ?? 'Registration details are invalid.');
+  }
+
   const {
     email,
     password,
@@ -96,11 +107,15 @@ export const signUp = async (userData: SignUpParams) => {
     postalCode,
     dateOfBirth,
     country,
-  } = registration;
+  } = validation.data;
+
+  const adminClient = await createAdminClient();
+  const { account, database, users } = adminClient;
+  let authUserId: string | null = null;
+  let userDocumentId: string | null = null;
+  let bankDocumentId: string | null = null;
 
   try {
-    const { account, database } = await createAdminClient();
-
     const newUserAccount = await account.create(
       ID.unique(),
       email,
@@ -108,11 +123,9 @@ export const signUp = async (userData: SignUpParams) => {
       `${firstName} ${lastName}`
     );
 
-    if (!newUserAccount) {
-      throw new Error('Account creation failed');
-    }
-
+    authUserId = newUserAccount.$id;
     const consentTimestamp = new Date().toISOString();
+
     const newUser = await database.createDocument(
       DATABASE_ID!,
       USER_COLLECTION_ID!,
@@ -121,7 +134,7 @@ export const signUp = async (userData: SignUpParams) => {
         email,
         firstName,
         lastName,
-        userId: newUserAccount.$id,
+        userId: authUserId,
         mobileNumber,
         address1,
         suburb,
@@ -134,14 +147,15 @@ export const signUp = async (userData: SignUpParams) => {
         privacyAcceptedAt: consentTimestamp,
       }
     );
+    userDocumentId = newUser.$id;
 
     const mockBank = getMockBankAccount(email);
-    await database.createDocument(
+    const newBank = await database.createDocument(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
       ID.unique(),
       {
-        userId: newUserAccount.$id,
+        userId: authUserId,
         bankId: mockBank.accountId,
         accountId: mockBank.accountId,
         accountNumber: mockBank.accountNumber,
@@ -152,12 +166,34 @@ export const signUp = async (userData: SignUpParams) => {
         linkedAt: mockBank.linkedAt,
       }
     );
+    bankDocumentId = newBank.$id;
 
-    const session = await account.createEmailPasswordSession(email, password);
+    const publicAccount = createPublicAccountClient();
+    const session = await publicAccount.createEmailPasswordSession(email, password);
     setSessionCookie(session.secret);
 
     return parseStringify(newUser);
   } catch (error: any) {
+    // Registration should behave as one unit. Remove partial demo data when a
+    // later step fails so the user can retry without orphaned records.
+    if (bankDocumentId) {
+      await database
+        .deleteDocument(DATABASE_ID!, BANK_COLLECTION_ID!, bankDocumentId)
+        .catch(() => undefined);
+    }
+
+    if (userDocumentId) {
+      await database
+        .deleteDocument(DATABASE_ID!, USER_COLLECTION_ID!, userDocumentId)
+        .catch(() => undefined);
+    }
+
+    if (authUserId) {
+      await users.delete(authUserId).catch(() => undefined);
+    }
+
+    cookies().delete('appwrite-session');
+
     console.error('Sign-up failed', {
       code: error?.code,
       type: error?.type,
