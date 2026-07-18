@@ -40,9 +40,9 @@ export type LoginUser = {
 };
 
 export type User = {
-  $id: string;
-  email: string;
+  id: string;
   userId: string;
+  email: string;
   firstName: string;
   lastName: string;
   name?: string;
@@ -75,13 +75,15 @@ export type Account = {
   name: string;
   type: string;
   subtype: string;
-  appwriteItemId: string;
-  shareableId: string;
+  branchCode: string;
+  accountNumber: string;
+  currency: 'ZAR';
+  demoReference: string;
+  isDemo: boolean;
 };
 
 export type Transaction = {
   id: string;
-  $id: string;
   name: string;
   amount: number;
   category: string;
@@ -90,26 +92,30 @@ export type Transaction = {
   channel?: string;
   type?: string;
   accountId?: string;
+  relatedAccountId?: string;
+  status?: string;
+  statementDescription?: string;
+  beneficiary?: string;
+  isDemo?: boolean;
   pending?: boolean;
   image?: string;
   typeIcon?: string;
   createdAt?: string;
-  $createdAt?: string;
-  senderBankId?: string;
-  receiverBankId?: string;
 };
 
 export type Bank = {
-  $id: string;
+  id: string;
   userId: string;
   accountId: string;
   bankId: string;
   accountNumber: string;
   branchCode: string;
   bankName: string;
-  balance: number;
+  currentBalance: number;
+  availableBalance: number;
   currency: 'ZAR';
-  linkedAt: string;
+  createdAt: string;
+  isDemo: boolean;
 };
 
 export type AccountTypes = 'depository' | 'credit' | 'loan' | 'investment' | 'other';
@@ -135,7 +141,7 @@ export interface CreditCardProps {
 
 export interface BankInfoProps {
   account: Account;
-  appwriteItemId?: string;
+  accountId?: string;
   type: 'full' | 'card';
 }
 
@@ -175,7 +181,7 @@ export interface BankDropdownProps {
 
 export interface BankTabItemProps {
   account: Account;
-  appwriteItemId?: string;
+  accountId?: string;
 }
 
 export interface TotalBalanceBoxProps {
@@ -202,7 +208,7 @@ export interface SiderbarProps {
 export interface RecentTransactionsProps {
   accounts: Account[];
   transactions: Transaction[];
-  appwriteItemId: string;
+  accountId: string;
   page: number;
 }
 
@@ -236,7 +242,7 @@ export interface getAccountsProps {
 }
 
 export interface getAccountProps {
-  appwriteItemId: string;
+  accountId: string;
 }
 
 export interface getInstitutionProps {
@@ -275,7 +281,7 @@ export interface getBanksProps {
 }
 
 export interface getBankProps {
-  documentId: string;
+  accountId: string;
 }
 
 export interface getBankByAccountIdProps {
