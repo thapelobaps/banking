@@ -16,7 +16,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     const accounts = await database.listDocuments(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
-      [Query.equal('userId', userId)] // Query by userId, not $id
+      [Query.equal('userId', userId)]
     );
 
     const formattedAccounts = accounts.documents.map((bank: any) => ({
@@ -28,9 +28,11 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
       officialName: bank.bankName,
       mask: bank.accountNumber.slice(-4),
       type: 'depository',
-      subtype: 'checking',
+      subtype: 'transaction',
       appwriteItemId: bank.$id,
-      shareableId: bank.accountId,
+      // This is a demo-only reference used to simulate transfers between
+      // Appwrite bank documents. It is not a real bank account identifier.
+      shareableId: bank.$id,
     }));
 
     const totalBanks = accounts.documents.length;
@@ -115,23 +117,33 @@ export const createMockTransfer = async ({
   try {
     const { database } = await createAdminClient();
 
-    // Fetch sender and receiver bank documents
     const senderBank = await database.listDocuments(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
-      [Query.equal('$id', senderBankId)] // Single string for $id
+      [Query.equal('$id', senderBankId)]
     );
     const receiverBank = await database.listDocuments(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
-      [Query.equal('$id', receiverBankId)] // Single string for $id
+      [Query.equal('$id', receiverBankId)]
     );
 
     if (!senderBank.documents[0] || !receiverBank.documents[0]) {
       throw new Error('Sender or receiver bank not found');
     }
 
-    // Update sender balance
+    if (senderBankId === receiverBankId) {
+      throw new Error('Sender and receiver accounts must be different');
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Transfer amount must be greater than zero');
+    }
+
+    if (senderBank.documents[0].balance < amount) {
+      throw new Error('Insufficient demo balance');
+    }
+
     await database.updateDocument(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
@@ -139,7 +151,6 @@ export const createMockTransfer = async ({
       { balance: senderBank.documents[0].balance - amount }
     );
 
-    // Update receiver balance
     await database.updateDocument(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
@@ -147,7 +158,6 @@ export const createMockTransfer = async ({
       { balance: receiverBank.documents[0].balance + amount }
     );
 
-    // Create transaction
     const transaction = await database.createDocument(
       DATABASE_ID!,
       TRANSACTION_COLLECTION_ID!,
@@ -157,9 +167,11 @@ export const createMockTransfer = async ({
         receiverBankId,
         amount,
         name,
-        channel: 'online',
+        channel: 'demo',
         category: 'Transfer',
         date: new Date().toISOString(),
+        status: 'completed',
+        isSimulated: true,
       }
     );
 
