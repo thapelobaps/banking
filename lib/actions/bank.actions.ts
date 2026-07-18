@@ -30,8 +30,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
       type: 'depository',
       subtype: 'transaction',
       appwriteItemId: bank.$id,
-      // This is a demo-only reference used to simulate transfers between
-      // Appwrite bank documents. It is not a real bank account identifier.
+      // Demo-only Appwrite document reference. This is not a real bank identifier.
       shareableId: bank.$id,
     }));
 
@@ -117,21 +116,6 @@ export const createMockTransfer = async ({
   try {
     const { database } = await createAdminClient();
 
-    const senderBank = await database.listDocuments(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      [Query.equal('$id', senderBankId)]
-    );
-    const receiverBank = await database.listDocuments(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      [Query.equal('$id', receiverBankId)]
-    );
-
-    if (!senderBank.documents[0] || !receiverBank.documents[0]) {
-      throw new Error('Sender or receiver bank not found');
-    }
-
     if (senderBankId === receiverBankId) {
       throw new Error('Sender and receiver accounts must be different');
     }
@@ -140,42 +124,85 @@ export const createMockTransfer = async ({
       throw new Error('Transfer amount must be greater than zero');
     }
 
-    if (senderBank.documents[0].balance < amount) {
+    const senderBank = await database.getDocument(
+      DATABASE_ID!,
+      BANK_COLLECTION_ID!,
+      senderBankId
+    );
+    const receiverBank = await database.getDocument(
+      DATABASE_ID!,
+      BANK_COLLECTION_ID!,
+      receiverBankId
+    );
+
+    const senderBalance = Number(senderBank.balance);
+    const receiverBalance = Number(receiverBank.balance);
+
+    if (!Number.isFinite(senderBalance) || !Number.isFinite(receiverBalance)) {
+      throw new Error('Demo account balance is invalid');
+    }
+
+    if (senderBalance < amount) {
       throw new Error('Insufficient demo balance');
     }
 
-    await database.updateDocument(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      senderBankId,
-      { balance: senderBank.documents[0].balance - amount }
-    );
+    let senderUpdated = false;
+    let receiverUpdated = false;
 
-    await database.updateDocument(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      receiverBankId,
-      { balance: receiverBank.documents[0].balance + amount }
-    );
-
-    const transaction = await database.createDocument(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      ID.unique(),
-      {
+    try {
+      await database.updateDocument(
+        DATABASE_ID!,
+        BANK_COLLECTION_ID!,
         senderBankId,
-        receiverBankId,
-        amount,
-        name,
-        channel: 'demo',
-        category: 'Transfer',
-        date: new Date().toISOString(),
-        status: 'completed',
-        isSimulated: true,
-      }
-    );
+        { balance: senderBalance - amount }
+      );
+      senderUpdated = true;
 
-    return parseStringify(transaction);
+      await database.updateDocument(
+        DATABASE_ID!,
+        BANK_COLLECTION_ID!,
+        receiverBankId,
+        { balance: receiverBalance + amount }
+      );
+      receiverUpdated = true;
+
+      const transaction = await database.createDocument(
+        DATABASE_ID!,
+        TRANSACTION_COLLECTION_ID!,
+        ID.unique(),
+        {
+          senderBankId,
+          receiverBankId,
+          amount,
+          name,
+          channel: 'online',
+          category: 'Transfer',
+          date: new Date().toISOString(),
+        }
+      );
+
+      return parseStringify(transaction);
+    } catch (transferError) {
+      // Appwrite document updates are not transactional. Restore the original
+      // mock balances when a later step fails so demo data stays consistent.
+      if (receiverUpdated) {
+        await database
+          .updateDocument(DATABASE_ID!, BANK_COLLECTION_ID!, receiverBankId, {
+            balance: receiverBalance,
+          })
+          .catch(() => undefined);
+      }
+
+      if (senderUpdated) {
+        await database
+          .updateDocument(DATABASE_ID!, BANK_COLLECTION_ID!, senderBankId, {
+            balance: senderBalance,
+          })
+          .catch(() => undefined);
+      }
+
+      throw transferError;
+    }
   } catch (error: any) {
     console.error('Create mock transfer error:', {
       message: error.message,
