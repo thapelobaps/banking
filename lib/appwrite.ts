@@ -1,5 +1,4 @@
-// lib/appwrite.ts
-import { Client, Account, Databases } from 'node-appwrite';
+import { Account, Client, Databases, Users } from 'node-appwrite';
 import { cookies } from 'next/headers';
 
 export const createAdminClient = async () => {
@@ -11,6 +10,7 @@ export const createAdminClient = async () => {
   return {
     account: new Account(client),
     database: new Databases(client),
+    users: new Users(client),
   };
 };
 
