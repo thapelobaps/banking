@@ -1,9 +1,15 @@
 'use server';
-import { Client, Account, Databases, ID, Query, Models } from 'node-appwrite';
+
+import { Account, Client, ID, Models, Query } from 'node-appwrite';
 import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
+
 import { createAdminClient, createSessionClient } from '../appwrite';
-import { getMockBankAccount, parseStringify } from '../utils';
+import {
+  getMockBankAccount,
+  parseStringify,
+  signInSchema,
+  signUpSchema,
+} from '../utils';
 import { SignUpParams, User } from '@/types';
 
 const {
@@ -12,77 +18,101 @@ const {
   APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
 } = process.env;
 
+const setSessionCookie = (secret: string) => {
+  cookies().set('appwrite-session', secret, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+};
+
+const mapAuthenticationError = (error: any, fallback: string) => {
+  if (error?.code === 401) {
+    return 'Invalid email or password.';
+  }
+
+  if (error?.code === 409) {
+    return 'An account with this email address already exists.';
+  }
+
+  if (error?.code === 429) {
+    return 'Too many attempts. Please try again later.';
+  }
+
+  return fallback;
+};
+
 export const signIn = async ({ email, password }: { email: string; password: string }) => {
+  const credentials = signInSchema.parse({ email, password });
+
   try {
-    console.log('Sign-in attempt with:', { email, password });
-    console.log('Environment:', {
-      endpoint: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT,
-      project: process.env.NEXT_PUBLIC_APPWRITE_PROJECT,
-    });
     const client = new Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
     const account = new Account(client);
-    const session = await account.createEmailPasswordSession(email, password);
-    console.log('Session created:', session);
+    const session = await account.createEmailPasswordSession(
+      credentials.email,
+      credentials.password
+    );
 
-    // Set the session cookie
-    cookies().set('appwrite-session', session.secret, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production', // Only secure in production
-      maxAge: 31536000, // 1 year
-    });
-    console.log('Cookie set:', cookies().get('appwrite-session'));
+    setSessionCookie(session.secret);
 
     const user = await getUserInfo({ userId: session.userId });
     if (!user) {
-      throw new Error('User not found in database. Please sign up first.');
+      await account.deleteSession('current').catch(() => undefined);
+      cookies().delete('appwrite-session');
+      throw new Error('Your profile could not be loaded. Please contact support.');
     }
+
     return parseStringify(user);
   } catch (error: any) {
-    console.error('Sign-in error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Sign-in failed', {
+      code: error?.code,
+      type: error?.type,
     });
-    if (error.code === 401) {
-      throw new Error('Invalid email or password. Please check your credentials or reset your password.');
+
+    if (error instanceof Error && error.message.includes('profile could not be loaded')) {
+      throw error;
     }
-    throw new Error(error.message || 'Sign-in failed. Please try again.');
+
+    throw new Error(mapAuthenticationError(error, 'Sign-in failed. Please try again.'));
   }
 };
 
 export const signUp = async (userData: SignUpParams) => {
-  const { email, password, firstName, lastName, address1, city, state, postalCode, dateOfBirth, ssn } = userData;
+  const registration = signUpSchema.parse(userData);
+  const {
+    email,
+    password,
+    firstName,
+    lastName,
+    mobileNumber,
+    address1,
+    suburb,
+    city,
+    province,
+    postalCode,
+    dateOfBirth,
+    country,
+  } = registration;
+
   try {
-    console.log('Sign-up attempt with:', { email, firstName, lastName });
     const { account, database } = await createAdminClient();
 
-    // Check if user already exists
-    try {
-      await account.createEmailPasswordSession(email, password);
-      throw new Error('An account with this email already exists. Please sign in.');
-    } catch (error: any) {
-      if (error.code !== 401) {
-        throw new Error('Failed to check existing user: ' + error.message);
-      }
-    }
-
-    // Create new user account
     const newUserAccount = await account.create(
       ID.unique(),
       email,
       password,
       `${firstName} ${lastName}`
     );
+
     if (!newUserAccount) {
-      throw new Error('Failed to create user account');
+      throw new Error('Account creation failed');
     }
 
-    // Create mock bank
-    const mockBank = getMockBankAccount(email);
+    const consentTimestamp = new Date().toISOString();
     const newUser = await database.createDocument(
       DATABASE_ID!,
       USER_COLLECTION_ID!,
@@ -92,15 +122,20 @@ export const signUp = async (userData: SignUpParams) => {
         firstName,
         lastName,
         userId: newUserAccount.$id,
+        mobileNumber,
         address1,
+        suburb,
         city,
-        state,
+        province,
         postalCode,
         dateOfBirth,
-        ssn,
+        country,
+        termsAcceptedAt: consentTimestamp,
+        privacyAcceptedAt: consentTimestamp,
       }
     );
 
+    const mockBank = getMockBankAccount(email);
     await database.createDocument(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
@@ -110,7 +145,7 @@ export const signUp = async (userData: SignUpParams) => {
         bankId: mockBank.accountId,
         accountId: mockBank.accountId,
         accountNumber: mockBank.accountNumber,
-        routingNumber: mockBank.routingNumber,
+        branchCode: mockBank.branchCode,
         bankName: mockBank.bankName,
         balance: mockBank.balance,
         currency: mockBank.currency,
@@ -118,26 +153,19 @@ export const signUp = async (userData: SignUpParams) => {
       }
     );
 
-    // Create session
     const session = await account.createEmailPasswordSession(email, password);
-    console.log('Sign-up session created:', session);
-    cookies().set('appwrite-session', session.secret, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production', // Only secure in production
-      maxAge: 31536000,
-    });
-    console.log('Cookie set:', cookies().get('appwrite-session'));
+    setSessionCookie(session.secret);
 
     return parseStringify(newUser);
   } catch (error: any) {
-    console.error('Sign-up error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Sign-up failed', {
+      code: error?.code,
+      type: error?.type,
     });
-    throw new Error(error.message || 'Failed to sign up. Please try again.');
+
+    throw new Error(
+      mapAuthenticationError(error, 'Account creation failed. Please try again.')
+    );
   }
 };
 
@@ -147,17 +175,18 @@ export const getUserInfo = async ({ userId }: { userId: string }) => {
     const user = await database.listDocuments(
       DATABASE_ID!,
       USER_COLLECTION_ID!,
-      [Query.equal('userId', [userId])]
+      [Query.equal('userId', userId)]
     );
+
     if (!user.documents[0]) {
-      throw new Error('User not found');
+      return null;
     }
+
     return parseStringify(user.documents[0]);
   } catch (error: any) {
-    console.error('getUserInfo error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Unable to load user profile', {
+      code: error?.code,
+      type: error?.type,
     });
     return null;
   }
@@ -167,21 +196,18 @@ export const getLoggedInUser = async () => {
   try {
     const sessionClient = await createSessionClient();
     if (!sessionClient) {
-      throw new Error('No session client found');
+      return null;
     }
+
     const { account } = sessionClient;
     const session: Models.Session = await account.getSession('current');
-    console.log('Retrieved session:', session);
     const user = await getUserInfo({ userId: session.userId });
-    if (!user) {
-      throw new Error('User not found in database');
-    }
-    return parseStringify(user);
+
+    return user ? parseStringify(user) : null;
   } catch (error: any) {
-    console.error('getLoggedInUser error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Unable to load the current session', {
+      code: error?.code,
+      type: error?.type,
     });
     return null;
   }
@@ -193,17 +219,16 @@ export const getUserBankAccount = async (user: User) => {
     const bank = await database.listDocuments(
       DATABASE_ID!,
       BANK_COLLECTION_ID!,
-      [Query.equal('userId', [user.userId])]
+      [Query.equal('userId', user.userId)]
     );
-    if (bank.documents[0]) {
-      return parseStringify(bank.documents[0]);
-    }
-    return getMockBankAccount(user.email);
+
+    return bank.documents[0]
+      ? parseStringify(bank.documents[0])
+      : getMockBankAccount(user.email);
   } catch (error: any) {
-    console.error('getUserBankAccount error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Unable to load the demo bank account', {
+      code: error?.code,
+      type: error?.type,
     });
     return getMockBankAccount(user.email);
   }
@@ -212,18 +237,16 @@ export const getUserBankAccount = async (user: User) => {
 export const logoutAccount = async () => {
   try {
     const sessionClient = await createSessionClient();
-    if (!sessionClient) {
-      throw new Error('No session client found');
+    if (sessionClient) {
+      await sessionClient.account.deleteSession('current');
     }
-    const { account } = sessionClient;
-    await account.deleteSession('current');
+
     cookies().delete('appwrite-session');
     return true;
   } catch (error: any) {
-    console.error('Logout error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Sign-out failed', {
+      code: error?.code,
+      type: error?.type,
     });
     return false;
   }
@@ -242,19 +265,19 @@ export const createMockBank = async ({ userId, email }: { userId: string; email:
         bankId: mockBank.accountId,
         accountId: mockBank.accountId,
         accountNumber: mockBank.accountNumber,
-        routingNumber: mockBank.routingNumber,
+        branchCode: mockBank.branchCode,
         bankName: mockBank.bankName,
         balance: mockBank.balance,
         currency: mockBank.currency,
         linkedAt: mockBank.linkedAt,
       }
     );
+
     return parseStringify(newBank);
   } catch (error: any) {
-    console.error('Create mock bank error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    console.error('Unable to create a demo bank account', {
+      code: error?.code,
+      type: error?.type,
     });
     return null;
   }
