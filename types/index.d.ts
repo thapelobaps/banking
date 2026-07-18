@@ -5,19 +5,16 @@ export type SearchParamProps = {
   searchParams: { [key: string]: string | string[] | undefined };
 };
 
-export const SOUTH_AFRICAN_PROVINCES: readonly [
-  'Eastern Cape',
-  'Free State',
-  'Gauteng',
-  'KwaZulu-Natal',
-  'Limpopo',
-  'Mpumalanga',
-  'North West',
-  'Northern Cape',
-  'Western Cape',
-];
-
-export type SouthAfricanProvince = (typeof SOUTH_AFRICAN_PROVINCES)[number];
+export type SouthAfricanProvince =
+  | 'Eastern Cape'
+  | 'Free State'
+  | 'Gauteng'
+  | 'KwaZulu-Natal'
+  | 'Limpopo'
+  | 'Mpumalanga'
+  | 'North West'
+  | 'Northern Cape'
+  | 'Western Cape';
 
 export type SignUpParams = {
   firstName: string;
@@ -33,8 +30,8 @@ export type SignUpParams = {
   postalCode: string;
   dateOfBirth: string;
   country: 'South Africa';
-  termsAccepted: true;
-  privacyAccepted: true;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
 };
 
 export type LoginUser = {
@@ -172,7 +169,7 @@ export interface AuthFormProps {
 
 export interface BankDropdownProps {
   accounts: Account[];
-  setValue?: (name: 'senderBank', value: string) => void;
+  setValue?: (...args: any[]) => void;
   otherStyles?: string;
 }
 
