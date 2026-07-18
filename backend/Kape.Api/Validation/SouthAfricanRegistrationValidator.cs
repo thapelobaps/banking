@@ -1,5 +1,6 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
-using Kape.Api.Contracts;
+using Kape.Api.DTOs.Auth;
 
 namespace Kape.Api.Validation;
 
@@ -18,7 +19,7 @@ public static partial class SouthAfricanRegistrationValidator
         "Western Cape",
     ];
 
-    public static Dictionary<string, string[]> Validate(RegisterRequest request)
+    public static Dictionary<string, string[]> Validate(RegisterRequestDto request)
     {
         var errors = new Dictionary<string, string[]>();
 
@@ -34,8 +35,13 @@ public static partial class SouthAfricanRegistrationValidator
         if (NormaliseMobile(request.MobileNumber) is null)
             errors["mobileNumber"] = ["Enter a valid South African mobile number."];
 
-        if (request.Password.Length < 8 || !request.Password.Any(char.IsLetter) || !request.Password.Any(char.IsDigit))
-            errors["password"] = ["Password must be at least eight characters and contain a letter and number."];
+        if (request.Password.Length < 8 ||
+            !request.Password.Any(char.IsLetter) ||
+            !request.Password.Any(char.IsDigit))
+        {
+            errors["password"] =
+                ["Password must be at least eight characters and contain a letter and number."];
+        }
 
         if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
             errors["confirmPassword"] = ["Passwords do not match."];
@@ -55,8 +61,16 @@ public static partial class SouthAfricanRegistrationValidator
         if (!PostalCodeRegex().IsMatch(request.PostalCode.Trim()))
             errors["postalCode"] = ["Postal code must contain exactly four digits."];
 
-        if (!DateOnly.TryParseExact(request.DateOfBirth, "yyyy-MM-dd", out var dateOfBirth) || dateOfBirth >= DateOnly.FromDateTime(DateTime.UtcNow))
+        if (!DateOnly.TryParseExact(
+                request.DateOfBirth,
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var dateOfBirth) ||
+            dateOfBirth >= DateOnly.FromDateTime(DateTime.UtcNow))
+        {
             errors["dateOfBirth"] = ["Enter a valid date of birth."];
+        }
 
         if (!string.Equals(request.Country, "South Africa", StringComparison.Ordinal))
             errors["country"] = ["Country must be South Africa."];
