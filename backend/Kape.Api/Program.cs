@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using Kape.Api.Contracts;
@@ -112,7 +113,10 @@ app.MapPost("/api/auth/register", async (
     }
 
     var mobileNumber = SouthAfricanRegistrationValidator.NormaliseMobile(request.MobileNumber)!;
-    var dateOfBirth = DateOnly.ParseExact(request.DateOfBirth, "yyyy-MM-dd");
+    var dateOfBirth = DateOnly.ParseExact(
+        request.DateOfBirth,
+        "yyyy-MM-dd",
+        CultureInfo.InvariantCulture);
     var now = DateTimeOffset.UtcNow;
 
     await using var transaction = await db.Database.BeginTransactionAsync();
@@ -223,12 +227,12 @@ app.MapGet("/api/accounts", async (
         return Results.Unauthorized();
     }
 
-    var accounts = await db.BankAccounts
+    var accountEntities = await db.BankAccounts
         .AsNoTracking()
         .Where(account => account.UserId == userId.Value)
         .OrderBy(account => account.CreatedAt)
-        .Select(account => ToAccountResponse(account))
         .ToListAsync();
+    var accounts = accountEntities.Select(ToAccountResponse).ToList();
 
     return Results.Ok(accounts);
 }).RequireAuthorization();
@@ -252,12 +256,12 @@ app.MapGet("/api/accounts/{accountId:guid}/transactions", async (
         return Results.NotFound();
     }
 
-    var transactions = await db.BankTransactions
+    var transactionEntities = await db.BankTransactions
         .AsNoTracking()
         .Where(transaction => transaction.BankAccountId == accountId)
         .OrderByDescending(transaction => transaction.TransactionDate)
-        .Select(transaction => ToTransactionResponse(transaction))
         .ToListAsync();
+    var transactions = transactionEntities.Select(ToTransactionResponse).ToList();
 
     return Results.Ok(transactions);
 }).RequireAuthorization();
@@ -308,9 +312,10 @@ app.MapPost("/api/transfers/demo", async (
     receiver.CurrentBalance += request.Amount;
     receiver.AvailableBalance += request.Amount;
 
-    var reference = string.IsNullOrWhiteSpace(request.Reference)
+    var trimmedReference = request.Reference?.Trim();
+    var reference = string.IsNullOrWhiteSpace(trimmedReference)
         ? "Demo transfer"
-        : request.Reference.Trim()[..Math.Min(request.Reference.Trim().Length, 120)];
+        : trimmedReference[..Math.Min(trimmedReference.Length, 120)];
     var transferDate = DateTimeOffset.UtcNow;
 
     var outgoing = new BankTransaction
