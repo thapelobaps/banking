@@ -158,8 +158,3 @@ export const logoutAccount = async () => {
   cookies().delete(ACCESS_TOKEN_COOKIE);
   return true;
 };
-
-export const createMockBank = async ({ userId: _userId, email: _email }: { userId: string; email: string }) => {
-  const currentUser = await getLoggedInUser();
-  return currentUser ? getUserBankAccount(currentUser) : null;
-};
