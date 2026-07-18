@@ -5,17 +5,36 @@ export type SearchParamProps = {
   searchParams: { [key: string]: string | string[] | undefined };
 };
 
+export const SOUTH_AFRICAN_PROVINCES: readonly [
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'North West',
+  'Northern Cape',
+  'Western Cape',
+];
+
+export type SouthAfricanProvince = (typeof SOUTH_AFRICAN_PROVINCES)[number];
+
 export type SignUpParams = {
   firstName: string;
   lastName: string;
+  email: string;
+  mobileNumber: string;
+  password: string;
+  confirmPassword: string;
   address1: string;
+  suburb: string;
   city: string;
-  state: string;
+  province: SouthAfricanProvince;
   postalCode: string;
   dateOfBirth: string;
-  ssn: string;
-  email: string;
-  password: string;
+  country: 'South Africa';
+  termsAccepted: true;
+  privacyAccepted: true;
 };
 
 export type LoginUser = {
@@ -27,17 +46,19 @@ export type User = {
   $id: string;
   email: string;
   userId: string;
-  dwollaCustomerUrl: string;
-  dwollaCustomerId: string;
   firstName: string;
   lastName: string;
-  name: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
+  name?: string;
+  mobileNumber?: string;
+  address1?: string;
+  suburb?: string;
+  city?: string;
+  province?: SouthAfricanProvince;
+  postalCode?: string;
+  dateOfBirth?: string;
+  country?: 'South Africa';
+  termsAcceptedAt?: string;
+  privacyAcceptedAt?: string;
 };
 
 export type NewUserParams = {
@@ -48,7 +69,6 @@ export type NewUserParams = {
 };
 
 export type Account = {
-  [x: string]: string;
   id: string;
   availableBalance: number;
   currentBalance: number;
@@ -66,33 +86,38 @@ export type Transaction = {
   id: string;
   $id: string;
   name: string;
-  paymentChannel: string;
-  type: string;
-  accountId: string;
   amount: number;
-  pending: boolean;
   category: string;
   date: string;
-  image: string;
-  $createdAt: string;
-  channel: string;
-  senderBankId: string;
-  receiverBankId: string;
+  paymentChannel?: string;
+  channel?: string;
+  type?: string;
+  accountId?: string;
+  pending?: boolean;
+  image?: string;
+  typeIcon?: string;
+  createdAt?: string;
+  $createdAt?: string;
+  senderBankId?: string;
+  receiverBankId?: string;
 };
 
 export type Bank = {
   $id: string;
+  userId: string;
   accountId: string;
   bankId: string;
-  accessToken: string;
-  fundingSourceUrl: string;
-  userId: string;
-  shareableId: string;
+  accountNumber: string;
+  branchCode: string;
+  bankName: string;
+  balance: number;
+  currency: 'ZAR';
+  linkedAt: string;
 };
 
 export type AccountTypes = 'depository' | 'credit' | 'loan' | 'investment' | 'other';
 
-export type Category = 'Food and Drink' | 'Travel' | 'Transfer';
+export type Category = 'Food and Drink' | 'Travel' | 'Transfer' | 'Shopping' | string;
 
 export type CategoryCount = {
   name: string;
@@ -103,31 +128,6 @@ export type CategoryCount = {
 export type Receiver = {
   firstName: string;
   lastName: string;
-};
-
-export type TransferParams = {
-  sourceFundingSourceUrl: string;
-  destinationFundingSourceUrl: string;
-  amount: string;
-};
-
-export type AddFundingSourceParams = {
-  dwollaCustomerId: string;
-  processorToken: string;
-  bankName: string;
-};
-
-export type NewDwollaCustomerParams = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  type: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
 };
 
 export interface CreditCardProps {
@@ -166,19 +166,13 @@ export interface PaginationProps {
   totalPages: number;
 }
 
-export interface PlaidLinkProps {
-  user: User;
-  variant?: 'primary' | 'ghost';
-  dwollaCustomerId?: string;
-}
-
 export interface AuthFormProps {
   type: 'sign-in' | 'sign-up';
 }
 
 export interface BankDropdownProps {
   accounts: Account[];
-  setValue?: any; // UseFormSetValue<any>;
+  setValue?: (name: 'senderBank', value: string) => void;
   otherStyles?: string;
 }
 
@@ -201,7 +195,7 @@ export interface FooterProps {
 export interface RightSidebarProps {
   user: User;
   transactions: Transaction[];
-  banks: Bank[] & Account[];
+  banks: Account[];
 }
 
 export interface SiderbarProps {
@@ -253,24 +247,17 @@ export interface getInstitutionProps {
 }
 
 export interface getTransactionsProps {
-  accessToken: string;
-}
-
-export interface CreateFundingSourceOptions {
-  customerId: string;
-  fundingSourceName: string;
-  plaidToken: string;
-  _links: object;
+  accountId: string;
 }
 
 export interface CreateTransactionProps {
   name: string;
-  amount: string;
-  senderId: string;
+  amount: number | string;
+  senderId?: string;
   senderBankId: string;
-  receiverId: string;
+  receiverId?: string;
   receiverBankId: string;
-  email: string;
+  email?: string;
 }
 
 export interface getTransactionsByBankIdProps {
@@ -286,20 +273,6 @@ export interface getUserInfoProps {
   userId: string;
 }
 
-export interface exchangePublicTokenProps {
-  publicToken: string;
-  user: User;
-}
-
-export interface createBankAccountProps {
-  accessToken: string;
-  userId: string;
-  accountId: string;
-  bankId: string;
-  fundingSourceUrl: string;
-  shareableId: string;
-}
-
 export interface getBanksProps {
   userId: string;
 }
@@ -310,76 +283,4 @@ export interface getBankProps {
 
 export interface getBankByAccountIdProps {
   accountId: string;
-}
-
-export interface CategoryCount {
-  name: string;
-  count: number;
-  totalCount: number;
-}
-
-export interface Transaction {
-  id: string;
-  $id: string;
-  name: string;
-  paymentChannel: string;
-  type: string;
-  accountId: string;
-  amount: number;
-  createdAt: string;
-  category: string;
-  date: string;
-  image: string;
-  typeIcon: string;
-}
-
-export interface User {
-  $id: string;
-  email: string;
-  userId: string;
-  dwollaCustomerId: string;
-  dwollaCustomerUrl: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
-}
-
-export interface SignUpParams {
-  firstName: string;
-  lastName: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
-  email: string;
-  password: string;
-}
-
-export interface Account {
-  id: string;
-  availableBalance: number;
-  currentBalance: number;
-  institutionId: string;
-  name: string;
-  officialName: string;
-  mask: string;
-  type: string;
-  subtype: string;
-  appwriteItemId: string;
-  shareableId: string;
-}
-
-export interface CreateTransactionProps {
-  senderBankId: string;
-  receiverBankId: string;
-  amount: number;
-  name: string;
 }
