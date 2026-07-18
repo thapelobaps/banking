@@ -1,6 +1,7 @@
 'use server';
+
+import { getAccounts, getTransactionsByBankId } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
-import { getAccounts } from '@/lib/actions/bank.actions';
 import { redirect } from 'next/navigation';
 import BankCard from '@/components/BankCard';
 import HeaderBox from '@/components/HeaderBox';
@@ -14,7 +15,7 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
   }
 
   const accounts = await getAccounts({ userId: user.userId });
-  if (!accounts || !accounts.data || accounts.data.length === 0) {
+  if (!accounts?.data.length) {
     return (
       <section className="home">
         <div className="home-content">
@@ -22,21 +23,21 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
             <HeaderBox
               type="greeting"
               title="Welcome"
-              user={`${user.firstName} ${user.lastName}` || 'Guest'}
-              subtext="Access and manage your account and transactions efficiently."
+              user={`${user.firstName} ${user.lastName}`}
+              subtext="Your Kape App demo accounts will appear here."
             />
             <TotalBalanceBox accounts={[]} totalBanks={0} totalCurrentBalance={0} />
           </header>
-          <p>No bank accounts found. Add a bank to get started.</p>
+          <p>No demo accounts are available.</p>
         </div>
         <RightSidebar user={user} transactions={[]} banks={[]} />
       </section>
     );
   }
 
-  // Use the first account or select based on searchParams.id if needed
-  const appwriteItemId = searchParams.id || accounts.data[0]?.appwriteItemId;
-  const account = accounts.data.find((acc: any) => acc.appwriteItemId === appwriteItemId) || accounts.data[0];
+  const selectedAccountId = searchParams.id ?? accounts.data[0].id;
+  const account = accounts.data.find((candidate) => candidate.id === selectedAccountId) ?? accounts.data[0];
+  const transactions = await getTransactionsByBankId({ bankId: account.id });
 
   return (
     <section className="home">
@@ -45,8 +46,8 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
           <HeaderBox
             type="greeting"
             title="Welcome"
-            user={`${user.firstName} ${user.lastName}` || 'Guest'}
-            subtext="Access and manage your account and transactions efficiently."
+            user={`${user.firstName} ${user.lastName}`}
+            subtext="View your South African demo accounts and recent activity."
           />
           <TotalBalanceBox
             accounts={accounts.data}
@@ -57,13 +58,13 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
         <BankCard
           account={account}
           userName={`${user.firstName} ${user.lastName}`}
-          showBalance={true}
+          showBalance
         />
       </div>
       <RightSidebar
         user={user}
-        transactions={[]}
-        banks={accounts.data.slice(0, 2)} // Show up to 2 banks in sidebar
+        transactions={transactions.documents.slice(0, 5)}
+        banks={accounts.data.slice(0, 2)}
       />
     </section>
   );
