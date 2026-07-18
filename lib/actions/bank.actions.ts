@@ -1,104 +1,119 @@
 'use server';
-import { ID, Query } from 'node-appwrite';
-import { createAdminClient } from '../appwrite';
-import { parseStringify } from '../utils';
-import { CreateTransactionProps, getAccountsProps, getTransactionsByBankIdProps } from '@/types';
 
-const {
-  APPWRITE_DATABASE_ID: DATABASE_ID,
-  APPWRITE_TRANSACTION_COLLECTION_ID: TRANSACTION_COLLECTION_ID,
-  APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
-} = process.env;
+import { cookies } from 'next/headers';
 
-export const getAccounts = async ({ userId }: getAccountsProps) => {
-  try {
-    const { database } = await createAdminClient();
-    const accounts = await database.listDocuments(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      [Query.equal('userId', userId)]
-    );
+import { ApiError, apiRequest } from '@/lib/api/client';
+import { Account, CreateTransactionProps, getAccountsProps, getTransactionsByBankIdProps, Transaction } from '@/types';
 
-    const formattedAccounts = accounts.documents.map((bank: any) => ({
-      id: bank.accountId,
-      availableBalance: bank.balance,
-      currentBalance: bank.balance,
-      institutionId: 'mock_institution',
-      name: bank.bankName,
-      officialName: bank.bankName,
-      mask: bank.accountNumber.slice(-4),
-      type: 'depository',
-      subtype: 'transaction',
-      appwriteItemId: bank.$id,
-      // Demo-only Appwrite document reference. This is not a real bank identifier.
-      shareableId: bank.$id,
-    }));
+const ACCESS_TOKEN_COOKIE = 'kape-access-token';
 
-    const totalBanks = accounts.documents.length;
-    const totalCurrentBalance = accounts.documents.reduce((total: number, account: any) => {
-      return total + account.balance;
-    }, 0);
-
-    return parseStringify({ data: formattedAccounts, totalBanks, totalCurrentBalance });
-  } catch (error: any) {
-    console.error('An error occurred while getting the accounts:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
-    });
-    return null;
-  }
+type ApiAccount = {
+  id: string;
+  bankId: string;
+  bankName: string;
+  accountNumber: string;
+  branchCode: string;
+  accountType: string;
+  currentBalance: number;
+  availableBalance: number;
+  currency: 'ZAR';
+  isDemo: boolean;
 };
 
-export const createTransaction = async (transaction: CreateTransactionProps) => {
+type ApiTransaction = {
+  id: string;
+  bankAccountId: string;
+  relatedBankAccountId?: string | null;
+  name: string;
+  statementDescription: string;
+  beneficiary?: string | null;
+  amount: number;
+  direction: 'credit' | 'debit';
+  category: string;
+  channel: string;
+  status: string;
+  transactionDate: string;
+  isDemo: boolean;
+};
+
+const getAccessToken = () => cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+
+const toAccount = (account: ApiAccount): Account => ({
+  id: account.id,
+  availableBalance: account.availableBalance,
+  currentBalance: account.currentBalance,
+  officialName: account.bankName,
+  mask: account.accountNumber.slice(-4),
+  institutionId: account.bankId,
+  name: account.bankName,
+  type: 'depository',
+  subtype: account.accountType,
+  branchCode: account.branchCode,
+  accountNumber: account.accountNumber,
+  currency: account.currency,
+  demoReference: account.id,
+  isDemo: account.isDemo,
+});
+
+const toTransaction = (transaction: ApiTransaction): Transaction => ({
+  id: transaction.id,
+  name: transaction.name,
+  amount: transaction.amount,
+  category: transaction.category,
+  date: transaction.transactionDate,
+  paymentChannel: transaction.channel,
+  channel: transaction.channel,
+  type: transaction.direction,
+  accountId: transaction.bankAccountId,
+  relatedAccountId: transaction.relatedBankAccountId ?? undefined,
+  status: transaction.status,
+  statementDescription: transaction.statementDescription,
+  beneficiary: transaction.beneficiary ?? undefined,
+  isDemo: transaction.isDemo,
+});
+
+export const getAccounts = async ({ userId: _userId }: getAccountsProps) => {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    return null;
+  }
+
   try {
-    const { database } = await createAdminClient();
-    const newTransaction = await database.createDocument(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      ID.unique(),
-      {
-        channel: 'online',
-        category: 'Transfer',
-        ...transaction,
-      }
-    );
-    return parseStringify(newTransaction);
-  } catch (error: any) {
-    console.error('Create transaction error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    const response = await apiRequest<ApiAccount[]>('/api/accounts', {}, accessToken);
+    const data = response.map(toAccount);
+
+    return {
+      data,
+      totalBanks: data.length,
+      totalCurrentBalance: data.reduce((total, account) => total + account.currentBalance, 0),
+    };
+  } catch (error) {
+    console.error('Unable to load accounts', {
+      status: error instanceof ApiError ? error.status : undefined,
     });
     return null;
   }
 };
 
 export const getTransactionsByBankId = async ({ bankId }: getTransactionsByBankIdProps) => {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    return { total: 0, documents: [] as Transaction[] };
+  }
+
   try {
-    const { database } = await createAdminClient();
-    const senderTransactions = await database.listDocuments(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      [Query.equal('senderBankId', bankId)]
+    const response = await apiRequest<ApiTransaction[]>(
+      `/api/accounts/${encodeURIComponent(bankId)}/transactions`,
+      {},
+      accessToken
     );
-    const receiverTransactions = await database.listDocuments(
-      DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
-      [Query.equal('receiverBankId', bankId)]
-    );
-    const transactions = {
-      total: senderTransactions.total + receiverTransactions.total,
-      documents: [...senderTransactions.documents, ...receiverTransactions.documents],
-    };
-    return parseStringify(transactions);
-  } catch (error: any) {
-    console.error('Get transactions error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
+    const documents = response.map(toTransaction);
+    return { total: documents.length, documents };
+  } catch (error) {
+    console.error('Unable to load transactions', {
+      status: error instanceof ApiError ? error.status : undefined,
     });
-    return { total: 0, documents: [] };
+    return { total: 0, documents: [] as Transaction[] };
   }
 };
 
@@ -113,102 +128,32 @@ export const createMockTransfer = async ({
   amount: number;
   name: string;
 }) => {
-  try {
-    const { database } = await createAdminClient();
-
-    if (senderBankId === receiverBankId) {
-      throw new Error('Sender and receiver accounts must be different');
-    }
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error('Transfer amount must be greater than zero');
-    }
-
-    const senderBank = await database.getDocument(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      senderBankId
-    );
-    const receiverBank = await database.getDocument(
-      DATABASE_ID!,
-      BANK_COLLECTION_ID!,
-      receiverBankId
-    );
-
-    const senderBalance = Number(senderBank.balance);
-    const receiverBalance = Number(receiverBank.balance);
-
-    if (!Number.isFinite(senderBalance) || !Number.isFinite(receiverBalance)) {
-      throw new Error('Demo account balance is invalid');
-    }
-
-    if (senderBalance < amount) {
-      throw new Error('Insufficient demo balance');
-    }
-
-    let senderUpdated = false;
-    let receiverUpdated = false;
-
-    try {
-      await database.updateDocument(
-        DATABASE_ID!,
-        BANK_COLLECTION_ID!,
-        senderBankId,
-        { balance: senderBalance - amount }
-      );
-      senderUpdated = true;
-
-      await database.updateDocument(
-        DATABASE_ID!,
-        BANK_COLLECTION_ID!,
-        receiverBankId,
-        { balance: receiverBalance + amount }
-      );
-      receiverUpdated = true;
-
-      const transaction = await database.createDocument(
-        DATABASE_ID!,
-        TRANSACTION_COLLECTION_ID!,
-        ID.unique(),
-        {
-          senderBankId,
-          receiverBankId,
-          amount,
-          name,
-          channel: 'online',
-          category: 'Transfer',
-          date: new Date().toISOString(),
-        }
-      );
-
-      return parseStringify(transaction);
-    } catch (transferError) {
-      // Appwrite document updates are not transactional. Restore the original
-      // mock balances when a later step fails so demo data stays consistent.
-      if (receiverUpdated) {
-        await database
-          .updateDocument(DATABASE_ID!, BANK_COLLECTION_ID!, receiverBankId, {
-            balance: receiverBalance,
-          })
-          .catch(() => undefined);
-      }
-
-      if (senderUpdated) {
-        await database
-          .updateDocument(DATABASE_ID!, BANK_COLLECTION_ID!, senderBankId, {
-            balance: senderBalance,
-          })
-          .catch(() => undefined);
-      }
-
-      throw transferError;
-    }
-  } catch (error: any) {
-    console.error('Create mock transfer error:', {
-      message: error.message,
-      code: error.code,
-      type: error.type,
-    });
-    return null;
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    throw new Error('Sign in before simulating a transfer.');
   }
+
+  const response = await apiRequest<ApiTransaction>(
+    '/api/transfers/demo',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        senderBankAccountId: senderBankId,
+        receiverBankAccountId: receiverBankId,
+        amount,
+        reference: name,
+      }),
+    },
+    accessToken
+  );
+
+  return toTransaction(response);
 };
+
+export const createTransaction = async (transaction: CreateTransactionProps) =>
+  createMockTransfer({
+    senderBankId: transaction.senderBankId,
+    receiverBankId: transaction.receiverBankId,
+    amount: Number(transaction.amount),
+    name: transaction.name,
+  });
