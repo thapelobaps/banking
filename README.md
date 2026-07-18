@@ -15,12 +15,43 @@ Kape App is a South African-focused personal finance application with a Next.js 
 
 ### Backend
 
-- .NET 10 ASP.NET Core minimal API
+- .NET 10 ASP.NET Core Web API with controllers
 - ASP.NET Core Identity
 - JWT authentication
 - Entity Framework Core
 - SQL Server
-- Provider-independent South African demo banking service
+- Provider-independent South African demo banking provider
+
+The backend follows the same enterprise layering used in the hospital system:
+
+```text
+backend/Kape.Api/
+├── Configuration/
+├── Controllers/
+├── Data/
+├── Domain/
+├── DTOs/
+│   ├── Auth/
+│   └── Banking/
+├── Exceptions/
+├── Mapping/
+├── Middleware/
+├── Repositories/
+│   └── Interfaces/
+├── Services/
+│   └── Interfaces/
+├── Validation/
+├── Program.cs
+└── Kape.Api.csproj
+```
+
+The request flow is:
+
+```text
+Controller → Service → Repository → KapeDbContext → SQL Server
+```
+
+Controllers stay thin, services contain business rules, repositories contain data access, and controllers return DTOs instead of EF entities.
 
 Appwrite, Plaid and Dwolla are not used by the current application tree.
 
