@@ -2,6 +2,29 @@
 
 Appwrite has been removed from the current application tree. Authentication, South African registration, demo accounts, balances and transactions now belong to the ASP.NET Core API and SQL Server model under `backend/Kape.Api`.
 
+## Backend architecture
+
+The API follows the same layered structure used in the hospital system:
+
+```text
+Controller → Service → Repository → KapeDbContext → SQL Server
+```
+
+Folder responsibilities:
+
+- `Controllers` — HTTP routes only; no EF Core queries or business logic.
+- `DTOs` — request and response contracts returned by controllers.
+- `Services` and `Services/Interfaces` — business rules and workflows.
+- `Repositories` and `Repositories/Interfaces` — Identity and EF Core data access.
+- `Mapping` — entity-to-DTO transformations.
+- `Configuration` — dependency injection, Identity, JWT, SQL Server and CORS setup.
+- `Middleware` — global exception handling.
+- `Validation` — South African registration rules.
+- `Data` — `KapeDbContext` and design-time context factory.
+- `Domain` — database entities.
+
+`Program.cs` contains startup wiring only.
+
 ## Prerequisites
 
 - .NET 10 SDK
@@ -34,6 +57,7 @@ From the repository root:
 ```powershell
 dotnet tool install --global dotnet-ef
 dotnet restore backend/Kape.Api/Kape.Api.csproj
+dotnet build backend/Kape.Api/Kape.Api.csproj
 dotnet ef migrations add InitialCreate --project backend/Kape.Api --startup-project backend/Kape.Api
 dotnet ef database update --project backend/Kape.Api --startup-project backend/Kape.Api
 ```
@@ -84,16 +108,16 @@ New registration stores:
 
 It does not request an ID number, passport number, SSN or real banking credentials.
 
-Registration also creates one SQL-backed demo account and starter demo transactions. The provider service supports Capitec, FNB, Absa, Standard Bank, Nedbank, TymeBank and Discovery Bank scenarios.
+Registration also creates one SQL-backed demo account and starter demo transactions. The provider supports Capitec, FNB, Absa, Standard Bank, Nedbank, TymeBank and Discovery Bank scenarios.
 
 ## Legacy Appwrite data
 
-No automatic Appwrite-to-SQL data migration is included in this change. Existing Appwrite users and documents will not appear in SQL Server automatically.
+No automatic Appwrite-to-SQL data migration is included. Existing Appwrite users and documents will not appear in SQL Server automatically.
 
-Before any future migration:
+Before a future migration:
 
 1. Revoke the Appwrite API key that was previously committed.
 2. Export only data that is legally required and still valid.
 3. Do not migrate SSN or obsolete US registration fields.
 4. Validate South African mobile, address and consent data before importing.
-5. Use a reviewed one-time migration tool rather than keeping Appwrite runtime code.
+5. Use a reviewed one-time migration tool rather than restoring Appwrite runtime code.
