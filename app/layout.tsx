@@ -6,6 +6,7 @@ import './globals.css';
 import './kape-theme.css';
 import './kape-responsive-fix.css';
 import './kape-desktop-rail.css';
+import './kape-density-90.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const ibmPlexSerif = IBM_Plex_Serif({
