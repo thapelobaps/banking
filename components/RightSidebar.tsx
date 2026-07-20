@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { countTransactionCategories, formatAmount } from '@/lib/utils';
 import { CategoryCount, RightSidebarProps } from '@/types';
@@ -20,6 +21,14 @@ const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
         </div>
       </section>
 
+      <section className="kape-rail__workspace">
+        <div>
+          <span>Workspace</span>
+          <strong>Personal demo</strong>
+        </div>
+        <span className="kape-rail__status" aria-label="Demo workspace active" />
+      </section>
+
       <section className="kape-rail__section">
         <div className="kape-rail__heading">
           <div>
@@ -31,14 +40,22 @@ const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
 
         {primaryAccount ? (
           <Link href={`/transaction-history?id=${primaryAccount.id}`} className="kape-account-summary">
+            <div className="kape-account-summary__label">Kape demo account</div>
             <div className="kape-account-summary__top">
               <span>{primaryAccount.name}</span>
               <small>Demo</small>
             </div>
-            <strong>{formatAmount(primaryAccount.currentBalance)}</strong>
+            <div>
+              <span className="kape-account-summary__balance-label">Current balance</span>
+              <strong>{formatAmount(primaryAccount.currentBalance)}</strong>
+            </div>
+            <div className="kape-account-summary__holder">{user.firstName} {user.lastName}</div>
             <div className="kape-account-summary__bottom">
-              <span>•••• {primaryAccount.mask}</span>
-              <span>{primaryAccount.currency}</span>
+              <span>•••• •••• •••• {primaryAccount.mask}</span>
+              <span className="kape-account-summary__network">
+                <Image src="/icons/Paypass.svg" width={13} height={16} alt="Contactless" className="brightness-0 invert" />
+                <Image src="/icons/mastercard.svg" width={28} height={20} alt="Card network" />
+              </span>
             </div>
           </Link>
         ) : (
