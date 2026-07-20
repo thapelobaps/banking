@@ -3,7 +3,13 @@
 import { cookies } from 'next/headers';
 
 import { ApiError, apiRequest } from '@/lib/api/client';
-import { Account, CreateTransactionProps, getAccountsProps, getTransactionsByBankIdProps, Transaction } from '@/types';
+import {
+  Account,
+  CreateTransactionProps,
+  getAccountsProps,
+  getTransactionsByBankIdProps,
+  Transaction,
+} from '@/types';
 
 const ACCESS_TOKEN_COOKIE = 'kape-access-token';
 
@@ -97,11 +103,7 @@ export const getAccounts = async ({ userId: _userId }: getAccountsProps) => {
   }
 
   try {
-    const response = await apiRequest<ApiAccount[]>(
-      '/api/accounts/demo/ensure',
-      { method: 'POST' },
-      accessToken
-    );
+    const response = await apiRequest<ApiAccount[]>('/api/accounts', {}, accessToken);
     const data = response.map(toAccount);
 
     return {
