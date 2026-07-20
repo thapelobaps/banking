@@ -23,24 +23,31 @@ export const BankDropdown = ({ accounts = [], setValue, otherStyles }: BankDropd
       value: id,
     });
     router.push(newUrl, { scroll: false });
-
     setValue?.('senderBank', id);
   };
 
   return (
     <Select value={selected?.id} onValueChange={handleBankChange}>
-      <SelectTrigger className={`flex w-full gap-3 bg-white md:w-[300px] ${otherStyles}`}>
-        <Image src="/icons/credit-card.svg" width={20} height={20} alt="account" />
-        <p className="line-clamp-1 w-full text-left">{selected?.name || 'Select an account'}</p>
+      <SelectTrigger className={`flex h-14 w-full gap-3 rounded-xl border-[#ddcec5] bg-white px-4 text-[#2b1a14] shadow-none focus:ring-[#7a4a37] md:w-[340px] ${otherStyles}`}>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f3ebe6]">
+          <Image src="/icons/credit-card.svg" width={19} height={19} alt="" className="opacity-75" />
+        </span>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-sm font-semibold">{selected?.name || 'Select an account'}</p>
+          {selected && <p className="mt-0.5 text-xs text-[#9a8378]">•••• {selected.mask}</p>}
+        </div>
       </SelectTrigger>
-      <SelectContent className={`w-full bg-white md:w-[300px] ${otherStyles}`} align="end">
+      <SelectContent className={`w-full rounded-2xl border-[#eadfd8] bg-white p-1 shadow-xl md:w-[340px] ${otherStyles}`} align="end">
         <SelectGroup>
-          <SelectLabel className="py-2 font-normal text-gray-500">Select an account</SelectLabel>
+          <SelectLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8378]">Select an account</SelectLabel>
           {accounts.map((account: Account) => (
-            <SelectItem key={account.id} value={account.id} className="cursor-pointer border-t">
-              <div className="flex flex-col">
-                <p className="text-16 font-medium">{account.name}</p>
-                <p className="text-14 font-medium text-blue-600">{formatAmount(account.currentBalance)}</p>
+            <SelectItem key={account.id} value={account.id} className="cursor-pointer rounded-xl border-t-0 px-3 py-3 focus:bg-[#f8f3ef]">
+              <div className="flex w-full items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#2b1a14]">{account.name}</p>
+                  <p className="mt-1 text-xs text-[#9a8378]">•••• {account.mask}</p>
+                </div>
+                <p className="text-sm font-semibold text-[#6b4435]">{formatAmount(account.currentBalance)}</p>
               </div>
             </SelectItem>
           ))}
