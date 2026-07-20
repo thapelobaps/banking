@@ -9,7 +9,7 @@ const BankCard = ({ account, userName, showBalance = true }: CreditCardProps) =>
     <div className="flex w-full max-w-[320px] flex-col gap-2.5">
       <Link
         href={`/transaction-history/?id=${account.id}`}
-        className="group relative min-h-[184px] overflow-hidden rounded-[22px] bg-gradient-to-br from-[#2b1811] via-[#563326] to-[#7a4a37] p-4.5 text-white shadow-[0_18px_44px_-26px_rgba(61,34,24,0.75)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_-24px_rgba(61,34,24,0.82)]"
+        className="group relative min-h-[184px] overflow-hidden rounded-[22px] bg-gradient-to-br from-[#2b1811] via-[#563326] to-[#7a4a37] p-[18px] text-white shadow-[0_18px_44px_-26px_rgba(61,34,24,0.75)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_-24px_rgba(61,34,24,0.82)]"
       >
         <div className="absolute -right-14 -top-16 size-44 rounded-full border border-white/10 bg-white/5" />
         <div className="absolute -bottom-20 -left-14 size-52 rounded-full border border-white/10 bg-black/10" />
