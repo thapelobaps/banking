@@ -1,0 +1,361 @@
+/*
+ * Final responsive layer for the Kape dashboard.
+ * Loaded after the legacy and base Kape styles so dashboard sizing remains
+ * predictable when browser zoom changes the CSS viewport width.
+ */
+
+.kape-shell {
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
+.kape-sidebar__inner {
+  padding: 13px 10px;
+}
+
+.kape-brand {
+  min-height: 38px;
+  gap: 8px;
+  padding-inline: 6px;
+}
+
+.kape-brand__mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.kape-brand__copy strong {
+  font-size: 15px;
+  line-height: 18px;
+}
+
+.kape-nav-link {
+  height: 36px;
+  gap: 8px;
+  border-radius: 9px;
+  padding-inline: 9px;
+  font-size: 12px;
+}
+
+.kape-page {
+  gap: 14px;
+  padding: 14px;
+}
+
+.kape-page-header {
+  gap: 12px;
+}
+
+.header-box-title {
+  font-size: clamp(21px, 1.7vw, 25px) !important;
+}
+
+.header-box-subtext {
+  font-size: 11px !important;
+}
+
+.kape-button {
+  min-height: 34px;
+  border-radius: 9px;
+  padding-inline: 12px;
+  font-size: 11px;
+}
+
+.kape-overview-grid {
+  grid-template-columns: minmax(245px, 285px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.kape-section-heading {
+  margin-bottom: 8px;
+}
+
+.kape-section-heading h2 {
+  font-size: 13px;
+}
+
+.kape-section-heading p,
+.kape-section-heading a {
+  font-size: 9px;
+}
+
+.kape-rail {
+  min-width: 0;
+  overflow-x: hidden;
+  padding: 12px;
+}
+
+.kape-rail__profile {
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.kape-rail__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 10px;
+}
+
+.kape-rail__identity strong {
+  font-size: 10px;
+}
+
+.kape-rail__identity span {
+  font-size: 8px;
+}
+
+.kape-rail__workspace {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  border: 1px solid #eee5df;
+  border-radius: 11px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.kape-rail__workspace > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.kape-rail__workspace span:first-child {
+  color: var(--kape-muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kape-rail__workspace strong {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kape-rail__status {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
+.kape-rail__section {
+  margin-top: 13px;
+}
+
+.kape-rail__heading {
+  margin-bottom: 7px;
+}
+
+.kape-rail__heading h2 {
+  font-size: 11px;
+}
+
+.kape-rail__heading p,
+.kape-rail__heading a {
+  font-size: 8px;
+}
+
+.kape-account-summary {
+  min-height: 150px;
+  border-radius: 14px;
+  padding: 11px;
+}
+
+.kape-account-summary__label {
+  overflow: hidden;
+  color: rgb(255 255 255 / 55%);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.kape-account-summary__top {
+  margin-top: 5px;
+}
+
+.kape-account-summary__top span {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kape-account-summary__top small {
+  font-size: 7px;
+}
+
+.kape-account-summary__balance-label {
+  display: block;
+  color: rgb(255 255 255 / 55%);
+  font-size: 8px;
+}
+
+.kape-account-summary > div > strong,
+.kape-account-summary > strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 18px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kape-account-summary__holder {
+  overflow: hidden;
+  color: rgb(255 255 255 / 65%);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kape-account-summary__bottom {
+  gap: 8px;
+  font-size: 8px;
+}
+
+.kape-account-summary__bottom > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kape-account-summary__network {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.kape-category-list {
+  gap: 6px;
+}
+
+.kape-category-row {
+  gap: 7px;
+  border-radius: 10px;
+  padding: 7px;
+}
+
+.kape-category-row__number {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 7px;
+  font-size: 8px;
+}
+
+.kape-category-row__content strong,
+.kape-category-row__content span {
+  font-size: 8px;
+}
+
+/* Keep the right rail visible on ordinary desktop and laptop viewports. */
+@media (min-width: 1280px) {
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr) 232px;
+  }
+
+  .kape-rail {
+    display: block;
+  }
+}
+
+@media (min-width: 1600px) {
+  .kape-shell {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr) 246px;
+  }
+}
+
+/* Collapse only when the viewport genuinely cannot hold both rails. */
+@media (max-width: 1279px) {
+  .kape-shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .kape-sidebar__inner {
+    padding-inline: 7px;
+  }
+
+  .kape-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .kape-brand__copy,
+  .kape-nav-link span,
+  .kape-user__details {
+    display: none;
+  }
+
+  .kape-nav-link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .kape-user {
+    grid-template-columns: 32px;
+    justify-content: center;
+  }
+
+  .kape-user__logout {
+    display: none;
+  }
+
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kape-rail {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .kape-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .kape-shell {
+    display: block;
+  }
+
+  .kape-page {
+    gap: 12px;
+    padding: 12px 10px 20px;
+  }
+
+  .kape-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-box-title {
+    font-size: 21px !important;
+  }
+
+  .header-box-subtext {
+    font-size: 12px !important;
+  }
+}
