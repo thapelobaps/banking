@@ -20,6 +20,15 @@ type ApiAccount = {
   isDemo: boolean;
 };
 
+type ApiRecipientPreview = {
+  id: string;
+  bankName: string;
+  accountMask: string;
+  accountType: string;
+  currency: 'ZAR';
+  isDemo: boolean;
+};
+
 type ApiTransaction = {
   id: string;
   bankAccountId: string;
@@ -33,6 +42,15 @@ type ApiTransaction = {
   channel: string;
   status: string;
   transactionDate: string;
+  isDemo: boolean;
+};
+
+export type RecipientPreview = {
+  id: string;
+  bankName: string;
+  accountMask: string;
+  accountType: string;
+  currency: 'ZAR';
   isDemo: boolean;
 };
 
@@ -93,6 +111,19 @@ export const getAccounts = async ({ userId: _userId }: getAccountsProps) => {
     });
     return null;
   }
+};
+
+export const getDemoRecipientPreview = async (accountId: string): Promise<RecipientPreview> => {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    throw new Error('Sign in before reviewing a recipient.');
+  }
+
+  return apiRequest<ApiRecipientPreview>(
+    `/api/accounts/demo-recipient/${encodeURIComponent(accountId)}`,
+    {},
+    accessToken
+  );
 };
 
 export const getTransactionsByBankId = async ({ bankId }: getTransactionsByBankIdProps) => {
