@@ -37,7 +37,20 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
 
   const selectedAccountId = searchParams.id ?? accounts.data[0].id;
   const account = accounts.data.find((candidate) => candidate.id === selectedAccountId) ?? accounts.data[0];
-  const transactions = await getTransactionsByBankId({ bankId: account.id });
+  const accountTransactionResults = await Promise.all(
+    accounts.data.map(async (candidate) => ({
+      accountId: candidate.id,
+      result: await getTransactionsByBankId({ bankId: candidate.id }),
+    }))
+  );
+  const transactions = accountTransactionResults.find((entry) => entry.accountId === account.id)?.result ?? {
+    total: 0,
+    documents: [],
+  };
+  const railTransactions = accountTransactionResults
+    .flatMap((entry) => entry.result.documents)
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+    .slice(0, 12);
 
   return (
     <section className="kape-dashboard">
@@ -83,7 +96,7 @@ export default async function Home({ searchParams }: { searchParams: { id?: stri
 
       <RightSidebar
         user={user}
-        transactions={transactions.documents.slice(0, 5)}
+        transactions={railTransactions}
         banks={accounts.data.slice(0, 2)}
       />
     </section>
