@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -23,6 +23,7 @@ import {
 import { formatAmount } from '@/lib/utils';
 import { PaymentTransferFormProps, Transaction } from '@/types';
 import { BankDropdown } from './BankDropdown';
+import RecipientDropdown, { demoRecipients } from './RecipientDropdown';
 import { Button } from './ui/button';
 import {
   Form,
@@ -43,7 +44,7 @@ const formSchema = z.object({
     .trim()
     .refine((value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0, 'Enter a valid amount greater than R0.00'),
   senderBank: z.string().uuid('Select a valid source account'),
-  recipientReference: z.string().uuid('Enter a valid demo account reference'),
+  recipientReference: z.string().uuid('Select a valid recipient account'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,6 +65,9 @@ type TransferReceipt = {
 
 const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
   const router = useRouter();
+  const initialSenderId = accounts[0]?.id ?? '';
+  const initialRecipientId = accounts.find((account) => account.id !== initialSenderId)?.id ?? demoRecipients[0].id;
+
   const [stage, setStage] = useState<Stage>('details');
   const [isLoading, setIsLoading] = useState(false);
   const [reviewData, setReviewData] = useState<TransferReview | null>(null);
@@ -74,10 +78,37 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
     defaultValues: {
       name: '',
       amount: '',
-      senderBank: accounts[0]?.id ?? '',
-      recipientReference: '',
+      senderBank: initialSenderId,
+      recipientReference: initialRecipientId,
     },
   });
+
+  const selectedSenderId = form.watch('senderBank');
+
+  useEffect(() => {
+    const currentRecipientId = form.getValues('recipientReference');
+    const isValidOwnRecipient = accounts.some(
+      (account) => account.id === currentRecipientId && account.id !== selectedSenderId
+    );
+    const isValidDemoRecipient = demoRecipients.some(
+      (recipient) => recipient.id === currentRecipientId
+    );
+
+    if (
+      !currentRecipientId ||
+      currentRecipientId === selectedSenderId ||
+      (!isValidOwnRecipient && !isValidDemoRecipient)
+    ) {
+      const fallbackRecipientId =
+        accounts.find((account) => account.id !== selectedSenderId)?.id ??
+        demoRecipients[0].id;
+
+      form.setValue('recipientReference', fallbackRecipientId, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [accounts, form, selectedSenderId]);
 
   const senderAccount = useMemo(
     () => accounts.find((account) => account.id === reviewData?.values.senderBank),
@@ -150,11 +181,14 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
   };
 
   const resetTransfer = () => {
+    const senderId = accounts[0]?.id ?? '';
+    const recipientId = accounts.find((account) => account.id !== senderId)?.id ?? demoRecipients[0].id;
+
     form.reset({
       name: '',
       amount: '',
-      senderBank: accounts[0]?.id ?? '',
-      recipientReference: '',
+      senderBank: senderId,
+      recipientReference: recipientId,
     });
     setReviewData(null);
     setReceipt(null);
@@ -338,10 +372,17 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
             name="recipientReference"
             render={({ field }) => (
               <FormItem className={sectionClass}>
-                <FormLabel className="text-xs font-semibold text-[#2b1a14]">Recipient account reference</FormLabel>
-                <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">Paste the reference from the recipient card.</FormDescription>
+                <FormLabel className="text-xs font-semibold text-[#2b1a14]">To account</FormLabel>
+                <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">
+                  Choose your other Kape account or a demo recipient.
+                </FormDescription>
                 <FormControl>
-                  <Input placeholder="e.g. 3451f061-..." className={`mt-2.5 ${inputClass}`} autoComplete="off" {...field} />
+                  <RecipientDropdown
+                    accounts={accounts}
+                    senderAccountId={selectedSenderId}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 </FormControl>
                 <FormMessage className="text-[10px] text-red-600" />
               </FormItem>
