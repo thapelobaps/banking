@@ -15,7 +15,7 @@ const TransactionHistory = async ({ searchParams: { id, page } }: SearchParamPro
   const accounts = await getAccounts({ userId: loggedIn.userId });
   if (!accounts?.data.length) {
     return (
-      <div className="transactions">
+      <div className="kape-page">
         <HeaderBox title="Transactions" subtext="No demo accounts are available." />
       </div>
     );
@@ -36,56 +36,48 @@ const TransactionHistory = async ({ searchParams: { id, page } }: SearchParamPro
   );
 
   return (
-    <div className="transactions">
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+    <div className="kape-page">
+      <div className="kape-page-header">
         <HeaderBox
           title="Transactions"
           subtext="Search through your latest South African demo account activity."
         />
-        <span className="w-fit rounded-full border border-[#dfd0c7] bg-white px-3 py-1.5 text-xs font-semibold text-[#6b4435]">
-          {result.total} transactions
-        </span>
+        <span className="kape-count-pill">{result.total} transactions</span>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="kape-account-tabs">
         {accounts.data.map((account) => {
           const active = account.id === selectedAccount.id;
           return (
             <Link
               key={account.id}
               href={`/transaction-history?id=${account.id}`}
-              className={`min-w-fit rounded-2xl border px-4 py-3 transition ${
-                active
-                  ? 'border-[#4a2b20] bg-[#4a2b20] text-white shadow-sm'
-                  : 'border-[#eadfd8] bg-white text-[#6f5b52] hover:border-[#cdb9ad]'
-              }`}
+              className={active ? 'is-active' : ''}
             >
-              <p className="text-sm font-semibold">{account.name}</p>
-              <p className={`mt-1 text-xs ${active ? 'text-white/60' : 'text-[#9a8378]'}`}>•••• {account.mask}</p>
+              <strong>{account.name}</strong>
+              <span>•••• {account.mask}</span>
             </Link>
           );
         })}
       </div>
 
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-r from-[#2b1811] via-[#4a2b20] to-[#724634] p-6 text-white shadow-[0_22px_55px_-32px_rgba(61,34,24,0.9)]">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/55">Selected account</p>
-            <h2 className="mt-3 text-2xl font-semibold">{selectedAccount.name}</h2>
-            <p className="mt-2 font-mono text-sm tracking-[0.15em] text-white/70">•••• •••• •••• {selectedAccount.mask}</p>
-          </div>
-          <div className="md:text-right">
-            <p className="text-sm text-white/60">Current balance</p>
-            <p className="mt-2 text-3xl font-semibold tabular-nums">{formatAmount(selectedAccount.currentBalance)}</p>
-            <p className="mt-2 text-xs text-white/50">Branch code {selectedAccount.branchCode}</p>
-          </div>
+      <section className="kape-selected-account">
+        <div>
+          <span>Selected account</span>
+          <h2>{selectedAccount.name}</h2>
+          <p>•••• •••• •••• {selectedAccount.mask}</p>
+        </div>
+        <div>
+          <span>Current balance</span>
+          <strong>{formatAmount(selectedAccount.currentBalance)}</strong>
+          <small>Branch code {selectedAccount.branchCode}</small>
         </div>
       </section>
 
-      <section className="flex w-full flex-col gap-6">
+      <section className="kape-transaction-section">
         <TransactionsTable transactions={currentTransactions} />
         {totalPages > 1 && (
-          <div className="my-4 w-full">
+          <div className="kape-pagination-wrap">
             <Pagination totalPages={totalPages} page={currentPage} />
           </div>
         )}
