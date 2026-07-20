@@ -13,19 +13,19 @@ const Footer = ({ user, type = 'desktop' }: FooterProps) => {
     if (loggedOut) router.push('/sign-in');
   };
 
+  const mobile = type === 'mobile';
+
   return (
-    <footer className="footer">
-      <div className={type === 'mobile' ? 'footer_name-mobile' : 'footer_name'}>
-        <p className="text-xl font-bold text-gray-700">{user.firstName[0]}</p>
-      </div>
-
-      <div className={type === 'mobile' ? 'footer_email-mobile' : 'footer_email'}>
-        <h1 className="text-14 truncate font-semibold text-gray-700">{user.firstName}</h1>
-        <p className="text-14 truncate font-normal text-gray-600">{user.email}</p>
-      </div>
-
-      <button type="button" className="footer_image" onClick={handleLogOut} aria-label="Sign out">
-        <Image src="/icons/logout.svg" fill alt="" />
+    <footer className={mobile ? 'kape-user kape-user--mobile' : 'kape-user'}>
+      <span className="kape-user__avatar" aria-hidden="true">
+        {user.firstName[0]}{user.lastName?.[0] ?? ''}
+      </span>
+      <span className="kape-user__details">
+        <strong>{user.firstName} {user.lastName}</strong>
+        <small>{user.email}</small>
+      </span>
+      <button type="button" className="kape-user__logout" onClick={handleLogOut} aria-label="Sign out">
+        <Image src="/icons/logout.svg" width={17} height={17} alt="" />
       </button>
     </footer>
   );
