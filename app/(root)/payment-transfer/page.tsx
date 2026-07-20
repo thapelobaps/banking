@@ -1,3 +1,4 @@
+import DemoRecipientReferences from '@/components/DemoRecipientReferences';
 import HeaderBox from '@/components/HeaderBox';
 import PaymentTransferForm from '@/components/PaymentTransferForm';
 import { getAccounts } from '@/lib/actions/bank.actions';
@@ -38,13 +39,16 @@ const Transfer = async () => {
             <span>How it works</span>
             <h2>Safe demo transfers</h2>
             <p>
-              Kape updates SQL Server demo balances and creates matching debit and credit records. No real bank is contacted.
+              Kape updates SQL Server demo balances and creates demo transaction records. No real bank is contacted.
             </p>
           </article>
+
+          <DemoRecipientReferences />
+
           <article>
             <h3>Before you send</h3>
             <ul>
-              <li>Use a different recipient account.</li>
+              <li>Use a recipient reference different from the selected source account.</li>
               <li>Check the recipient demo reference.</li>
               <li>Confirm the amount in South African rand.</li>
             </ul>
