@@ -97,7 +97,11 @@ export const getAccounts = async ({ userId: _userId }: getAccountsProps) => {
   }
 
   try {
-    const response = await apiRequest<ApiAccount[]>('/api/accounts', {}, accessToken);
+    const response = await apiRequest<ApiAccount[]>(
+      '/api/accounts/demo/ensure',
+      { method: 'POST' },
+      accessToken
+    );
     const data = response.map(toAccount);
 
     return {
