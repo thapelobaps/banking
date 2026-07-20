@@ -1,4 +1,3 @@
-import DemoRecipientReferences from '@/components/DemoRecipientReferences';
 import HeaderBox from '@/components/HeaderBox';
 import PaymentTransferForm from '@/components/PaymentTransferForm';
 import { getAccounts } from '@/lib/actions/bank.actions';
@@ -43,14 +42,21 @@ const Transfer = async () => {
             </p>
           </article>
 
-          <DemoRecipientReferences />
+          <article>
+            <h3>Recipient choices</h3>
+            <ul>
+              <li>Move money between your transaction and savings accounts.</li>
+              <li>Choose a verified fictional recipient for an external demo EFT.</li>
+              <li>The selected source account is automatically excluded.</li>
+            </ul>
+          </article>
 
           <article>
             <h3>Before you send</h3>
             <ul>
-              <li>Use a recipient reference different from the selected source account.</li>
-              <li>Check the recipient demo reference.</li>
+              <li>Check the recipient name and masked account.</li>
               <li>Confirm the amount in South African rand.</li>
+              <li>Review the transfer before final confirmation.</li>
             </ul>
           </article>
         </aside>
