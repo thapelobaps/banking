@@ -14,14 +14,14 @@ export default async function RootLayout({
   if (!loggedIn) redirect('/sign-in');
 
   return (
-    <main className="flex min-h-dvh w-full max-w-[100vw] overflow-hidden font-inter">
+    <main className="kape-shell font-inter">
       <Sidebar user={loggedIn} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="root-layout">
-          <Image src="/icons/logo.svg" width={30} height={30} alt="Kape App" />
+      <div className="kape-main">
+        <div className="kape-mobile-header">
+          <Image src="/icons/logo.svg" width={28} height={28} alt="Kape App" />
           <MobileNav user={loggedIn} />
         </div>
-        <div className="min-w-0 flex-1 overflow-hidden">{children}</div>
+        <div className="kape-viewport">{children}</div>
       </div>
     </main>
   );
