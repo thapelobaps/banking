@@ -1,0 +1,23 @@
+/*
+ * Keep the account rail available on laptop displays whose Windows scaling
+ * reduces the browser's CSS viewport below 1280px.
+ */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr) 214px;
+  }
+
+  .kape-rail {
+    display: block;
+    padding: 10px;
+  }
+
+  .kape-overview-grid,
+  .kape-transfer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kape-account-summary {
+    min-height: 144px;
+  }
+}
