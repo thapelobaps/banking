@@ -4,12 +4,23 @@ import { getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 
-const Transfer = async () => {
+type TransferPageProps = {
+  searchParams: {
+    id?: string | string[];
+  };
+};
+
+const Transfer = async ({ searchParams }: TransferPageProps) => {
   const loggedIn = await getLoggedInUser();
   if (!loggedIn) redirect('/sign-in');
 
   const accounts = await getAccounts({ userId: loggedIn.userId });
-  const accountsData = accounts?.data ?? [];
+  const requestedAccountId = Array.isArray(searchParams.id) ? searchParams.id[0] : searchParams.id;
+  const rawAccounts = accounts?.data ?? [];
+  const selectedAccount = rawAccounts.find((account) => account.id === requestedAccountId);
+  const accountsData = selectedAccount
+    ? [selectedAccount, ...rawAccounts.filter((account) => account.id !== selectedAccount.id)]
+    : rawAccounts;
 
   return (
     <section className="kape-page">
