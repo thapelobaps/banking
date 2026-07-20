@@ -8,6 +8,10 @@ public interface IAccountService
         Guid userId,
         CancellationToken cancellationToken);
 
+    Task<RecipientPreviewResponseDto> GetRecipientPreviewAsync(
+        Guid accountId,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyList<TransactionResponseDto>> GetTransactionsAsync(
         Guid userId,
         Guid accountId,
