@@ -1,17 +1,16 @@
-"use client";
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
-import { createMockTransfer } from "@/lib/actions/bank.actions";
-import { PaymentTransferFormProps } from "@/types";
-
-import { BankDropdown } from "./BankDropdown";
-import { Button } from "./ui/button";
+import { createMockTransfer } from '@/lib/actions/bank.actions';
+import { PaymentTransferFormProps } from '@/types';
+import { BankDropdown } from './BankDropdown';
+import { Button } from './ui/button';
 import {
   Form,
   FormControl,
@@ -20,26 +19,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "./ui/form";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
+} from './ui/form';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 const formSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .max(120, "Transfer note must be 120 characters or fewer")
-    .optional()
-    .default(""),
+  name: z.string().trim().max(120, 'Transfer note must be 120 characters or fewer').optional().default(''),
   amount: z
     .string()
     .trim()
-    .refine(
-      (value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0,
-      "Enter a valid amount greater than R0.00"
-    ),
-  senderBank: z.string().uuid("Select a valid source account"),
-  recipientReference: z.string().uuid("Enter a valid demo account reference"),
+    .refine((value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0, 'Enter a valid amount greater than R0.00'),
+  senderBank: z.string().uuid('Select a valid source account'),
+  recipientReference: z.string().uuid('Enter a valid demo account reference'),
 });
 
 const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
@@ -49,22 +40,20 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      amount: "",
-      senderBank: accounts[0]?.id ?? "",
-      recipientReference: "",
+      name: '',
+      amount: '',
+      senderBank: accounts[0]?.id ?? '',
+      recipientReference: '',
     },
   });
 
   const submit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    form.clearErrors("root");
+    form.clearErrors('root');
 
     try {
       if (data.senderBank === data.recipientReference) {
-        form.setError("recipientReference", {
-          message: "Choose a different recipient account",
-        });
+        form.setError('recipientReference', { message: 'Choose a different recipient account' });
         return;
       }
 
@@ -72,64 +61,55 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
         senderBankId: data.senderBank,
         receiverBankId: data.recipientReference,
         amount: Number(data.amount),
-        name: data.name || "Demo transfer",
+        name: data.name || 'Demo transfer',
       });
 
       form.reset({
-        name: "",
-        amount: "",
-        senderBank: accounts[0]?.id ?? "",
-        recipientReference: "",
+        name: '',
+        amount: '',
+        senderBank: accounts[0]?.id ?? '',
+        recipientReference: '',
       });
-      router.push("/");
+      router.push('/');
       router.refresh();
     } catch (error) {
-      form.setError("root", {
-        message:
-          error instanceof Error
-            ? error.message
-            : "The simulated transfer failed. No real money was moved.",
+      form.setError('root', {
+        message: error instanceof Error ? error.message : 'The simulated transfer failed. No real money was moved.',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const sectionClass = 'rounded-2xl border border-[#eee5df] bg-[#fdfaf8] p-5';
+  const inputClass = 'h-12 rounded-xl border-[#ddcec5] bg-white text-[#2b1a14] placeholder:text-[#aa968c] focus-visible:ring-[#7a4a37]';
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(submit)} className="flex flex-col">
-        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">Demo transfer only</p>
-          <p className="mt-1">
-            This flow updates SQL Server demo balances through the Kape API. It does not connect to a bank or move real money.
-          </p>
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-5">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <ShieldCheck className="mt-0.5 size-5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold">Demo transfer only</p>
+            <p className="mt-1 text-sm leading-5 text-amber-800">
+              This flow updates SQL Server demo balances through the Kape API. No live bank connection or real money movement occurs.
+            </p>
+          </div>
         </div>
 
         <FormField
           control={form.control}
           name="senderBank"
           render={() => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item pb-6 pt-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    From account
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Select the demo account to debit
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <BankDropdown
-                      accounts={accounts}
-                      setValue={form.setValue}
-                      otherStyles="!w-full"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
+            <FormItem className={sectionClass}>
+              <div className="mb-4">
+                <FormLabel className="text-sm font-semibold text-[#2b1a14]">From account</FormLabel>
+                <FormDescription className="mt-1 text-sm text-[#8a756b]">Select the demo account to debit.</FormDescription>
               </div>
+              <FormControl>
+                <BankDropdown accounts={accounts} setValue={form.setValue} otherStyles="!w-full" />
+              </FormControl>
+              <FormMessage className="text-xs text-red-600" />
             </FormItem>
           )}
         />
@@ -138,109 +118,72 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
           control={form.control}
           name="recipientReference"
           render={({ field }) => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item py-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    Recipient demo account reference
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Copy this reference from the recipient&apos;s demo account card
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <Input
-                      placeholder="Paste the demo account reference"
-                      className="input-class"
-                      autoComplete="off"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
-              </div>
+            <FormItem className={sectionClass}>
+              <FormLabel className="text-sm font-semibold text-[#2b1a14]">Recipient demo account reference</FormLabel>
+              <FormDescription className="mt-1 text-sm text-[#8a756b]">Paste the recipient reference from their account card.</FormDescription>
+              <FormControl>
+                <Input placeholder="e.g. 3451f061-..." className={`mt-4 ${inputClass}`} autoComplete="off" {...field} />
+              </FormControl>
+              <FormMessage className="text-xs text-red-600" />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item py-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    Amount (ZAR)
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Enter the mock amount to transfer
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem className={sectionClass}>
+                <FormLabel className="text-sm font-semibold text-[#2b1a14]">Amount in rand</FormLabel>
+                <FormDescription className="mt-1 text-sm text-[#8a756b]">Enter the amount using up to two decimals.</FormDescription>
+                <div className="relative mt-4">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#6b4435]">R</span>
                   <FormControl>
-                    <Input
-                      inputMode="decimal"
-                      placeholder="e.g. 250.00"
-                      className="input-class"
-                      {...field}
-                    />
+                    <Input inputMode="decimal" placeholder="250.00" className={`${inputClass} pl-9`} {...field} />
                   </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
                 </div>
-              </div>
-            </FormItem>
-          )}
-        />
+                <FormMessage className="text-xs text-red-600" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem className="border-y border-gray-200">
-              <div className="payment-transfer_form-item pb-6 pt-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    Payment reference
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Add an optional reference for the simulated transfer
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <Textarea
-                      placeholder="e.g. Shared groceries"
-                      className="input-class"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
-              </div>
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className={sectionClass}>
+                <FormLabel className="text-sm font-semibold text-[#2b1a14]">Payment reference</FormLabel>
+                <FormDescription className="mt-1 text-sm text-[#8a756b]">Add an optional note for the simulated transfer.</FormDescription>
+                <FormControl>
+                  <Textarea placeholder="e.g. Shared groceries" className="mt-4 min-h-12 rounded-xl border-[#ddcec5] bg-white text-[#2b1a14] placeholder:text-[#aa968c] focus-visible:ring-[#7a4a37]" {...field} />
+                </FormControl>
+                <FormMessage className="text-xs text-red-600" />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {form.formState.errors.root?.message && (
-          <p role="alert" className="mt-4 text-sm text-red-600">
+          <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {form.formState.errors.root.message}
           </p>
         )}
 
-        <div className="payment-transfer_btn-box">
+        <div className="flex justify-end pt-2">
           <Button
             type="submit"
-            className="payment-transfer_btn"
+            className="h-12 w-full rounded-xl bg-[#4a2b20] px-6 font-semibold text-white shadow-sm hover:bg-[#382017] sm:w-auto"
             disabled={isLoading || accounts.length === 0}
           >
             {isLoading ? (
               <>
-                <Loader2 size={20} className="animate-spin" /> &nbsp; Simulating...
+                <Loader2 size={18} className="mr-2 animate-spin" /> Simulating transfer
               </>
             ) : (
-              "Simulate transfer"
+              <>
+                Review and transfer <ArrowRight size={18} className="ml-2" />
+              </>
             )}
           </Button>
         </div>
