@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, IBM_Plex_Serif } from 'next/font/google';
 import './globals.css';
 import './kape-theme.css';
@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icons/logo.svg',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
