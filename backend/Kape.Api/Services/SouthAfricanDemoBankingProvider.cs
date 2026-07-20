@@ -41,13 +41,32 @@ public sealed class SouthAfricanDemoBankingProvider : IBankingProvider
         };
     }
 
-    public BankAccount CreateSecondaryDemoAccount(Guid userId, string email)
+    public BankAccount CreateSecondaryDemoAccount(Guid userId, string email) =>
+        CreateCompanionDemoAccount(userId, email, "savings");
+
+    public BankAccount CreateCompanionDemoAccount(
+        Guid userId,
+        string email,
+        string accountType)
     {
+        var normalisedType = string.Equals(
+            accountType,
+            "transaction",
+            StringComparison.OrdinalIgnoreCase)
+            ? "transaction"
+            : "savings";
         var hash = StableHash(email);
         var primaryBankIndex = hash % Banks.Length;
-        var bank = Banks[(primaryBankIndex + 1) % Banks.Length];
-        var suffix = ((hash * 7L + 137) % 1_000_000).ToString("D6");
-        var balance = 4_500m + (hash % 2_500);
+        var bankOffset = normalisedType == "savings" ? 1 : 2;
+        var bank = Banks[(primaryBankIndex + bankOffset) % Banks.Length];
+        var suffixSeed = normalisedType == "savings"
+            ? (hash * 7L) + 137
+            : (hash * 11L) + 911;
+        var suffix = (suffixSeed % 1_000_000).ToString("D6");
+        var accountCode = normalisedType == "savings" ? "SAVE" : "CURRENT";
+        var balance = normalisedType == "savings"
+            ? 4_500m + (hash % 2_500)
+            : 7_500m + (hash % 3_500);
 
         return new BankAccount
         {
@@ -55,10 +74,12 @@ public sealed class SouthAfricanDemoBankingProvider : IBankingProvider
             UserId = userId,
             ProviderId = ProviderId,
             BankId = bank.Id,
-            BankName = $"{bank.Name} Savings",
-            AccountNumber = $"DEMO-{bank.Id.ToUpperInvariant()}-SAVE-{suffix}",
+            BankName = normalisedType == "savings"
+                ? $"{bank.Name} Savings"
+                : bank.Name,
+            AccountNumber = $"DEMO-{bank.Id.ToUpperInvariant()}-{accountCode}-{suffix}",
             BranchCode = bank.BranchCode,
-            AccountType = "savings",
+            AccountType = normalisedType,
             CurrentBalance = balance,
             AvailableBalance = balance,
             Currency = "ZAR",
