@@ -1,6 +1,7 @@
 using System.Data;
 using Kape.Api.Data;
 using Kape.Api.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Kape.Api.Repositories;
