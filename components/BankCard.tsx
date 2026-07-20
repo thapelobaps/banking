@@ -6,15 +6,15 @@ import { CreditCardProps } from '@/types';
 
 const BankCard = ({ account, userName, showBalance = true }: CreditCardProps) => {
   return (
-    <div className="flex w-full max-w-[270px] flex-col gap-2">
+    <div className="kape-bank-card flex w-full max-w-[270px] flex-col gap-2">
       <Link
         href={`/transaction-history/?id=${account.id}`}
-        className="group relative min-h-[156px] overflow-hidden rounded-[18px] bg-gradient-to-br from-[#2b1811] via-[#563326] to-[#7a4a37] p-[14px] text-white shadow-[0_15px_36px_-24px_rgba(61,34,24,0.75)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_-22px_rgba(61,34,24,0.82)]"
+        className="kape-bank-card__surface group relative min-h-[156px] overflow-hidden rounded-[18px] bg-gradient-to-br from-[#2b1811] via-[#563326] to-[#7a4a37] p-[14px] text-white shadow-[0_15px_36px_-24px_rgba(61,34,24,0.75)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_-22px_rgba(61,34,24,0.82)]"
       >
         <div className="absolute -right-12 -top-14 size-36 rounded-full border border-white/10 bg-white/5" />
         <div className="absolute -bottom-16 -left-12 size-44 rounded-full border border-white/10 bg-black/10" />
 
-        <div className="relative z-10 flex min-h-[128px] flex-col justify-between">
+        <div className="kape-bank-card__content relative z-10 flex min-h-[128px] flex-col justify-between">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-[7px] font-medium uppercase tracking-[0.16em] text-white/60">Kape demo account</p>
