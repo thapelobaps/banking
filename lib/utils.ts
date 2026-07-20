@@ -167,10 +167,15 @@ export const isValidSouthAfricanMobile = (value: string) =>
   /^\+27[6-8]\d{8}$/.test(normaliseSouthAfricanMobile(value));
 
 export const parseSouthAfricanDateToIso = (value: string) => {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-  if (!match) return null;
+  const trimmed = value.trim();
+  const displayMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
 
-  const [, dayText, monthText, yearText] = match;
+  if (!displayMatch && !isoMatch) return null;
+
+  const dayText = displayMatch?.[1] ?? isoMatch![3];
+  const monthText = displayMatch?.[2] ?? isoMatch![2];
+  const yearText = displayMatch?.[3] ?? isoMatch![1];
   const day = Number(dayText);
   const month = Number(monthText);
   const year = Number(yearText);
