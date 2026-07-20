@@ -25,10 +25,10 @@ const Copy = ({ title, label = 'Reference' }: CopyProps) => {
     <button
       type="button"
       onClick={copyToClipboard}
-      className="flex w-full items-center gap-2 rounded-xl border border-[#eadfd8] bg-white px-3 py-2 text-left shadow-sm transition hover:border-[#cdb9ad] hover:bg-[#fdfaf8]"
+      className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-[#eadfd8] bg-white px-3 py-3 text-left shadow-sm transition hover:border-[#cdb9ad] hover:bg-[#fdfaf8] md:gap-2 md:py-2"
       aria-label={`Copy ${label.toLowerCase()}`}
     >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#f3ebe6] text-[#5b382a]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f3ebe6] text-[#5b382a] md:size-7">
         {copyState === 'copied' ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
@@ -41,12 +41,12 @@ const Copy = ({ title, label = 'Reference' }: CopyProps) => {
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[8px] font-semibold uppercase tracking-[0.14em] text-[#9a8378]">{label}</span>
-        <span className="mt-0.5 block truncate font-mono text-[9px] font-medium text-[#3b251d]">
+        <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-[#9a8378] md:text-[8px] md:tracking-[0.14em]">{label}</span>
+        <span className="mt-1 block truncate font-mono text-[11px] font-medium text-[#3b251d] md:mt-0.5 md:text-[9px]">
           {copyState === 'copied' ? 'Copied to clipboard' : copyState === 'failed' ? 'Copy failed' : title}
         </span>
       </span>
-      <span className="text-[9px] font-semibold text-[#7a4a37]">Copy</span>
+      <span className="shrink-0 text-[11px] font-semibold text-[#7a4a37] md:text-[9px]">Copy</span>
     </button>
   );
 };
