@@ -7,7 +7,6 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { sidebarLinks } from '@/constants';
-import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -20,61 +19,51 @@ const MobileNav = ({ user }: MobileNavProps) => {
   return (
     <section className="w-full max-w-[264px]">
       <Sheet>
-        <SheetTrigger aria-label="Open navigation">
-          <Image
-            src="/icons/hamburger.svg"
-            width={30}
-            height={30}
-            alt=""
-            className="cursor-pointer"
-          />
+        <SheetTrigger aria-label="Open navigation" className="flex size-10 items-center justify-center rounded-xl border border-[#eadfd8] bg-white">
+          <Image src="/icons/hamburger.svg" width={24} height={24} alt="" className="cursor-pointer" />
         </SheetTrigger>
-        <SheetContent side="left" className="border-none bg-white">
-          <Link href="/" className="flex cursor-pointer items-center gap-1 px-4">
-            <Image
-              src="/icons/logo.svg"
-              width={34}
-              height={34}
-              alt="Kape App logo"
-            />
-            <h1 className="text-26 font-ibm-plex-serif font-bold text-black-1">Kape App</h1>
+        <SheetContent side="left" className="border-r border-[#eadfd8] bg-white p-5">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-[#4a2b20]">
+              <Image src="/icons/logo.svg" width={26} height={26} alt="Kape App logo" className="brightness-0 invert" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-[#2b1a14]">Kape</h1>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a8378]">Money, simplified</p>
+            </div>
           </Link>
-          <div className="mobilenav-sheet">
-            <nav className="flex h-full flex-col gap-6 pt-16 text-white">
+
+          <div className="mobilenav-sheet mt-10">
+            <nav className="flex h-full flex-col gap-2">
               {sidebarLinks.map((item) => {
                 const isActive = pathname === item.route || pathname.startsWith(`${item.route}/`);
-
                 return (
                   <SheetClose asChild key={item.route}>
                     <Link
                       href={item.route}
-                      className={cn('mobilenav-sheet_close w-full', {
-                        'bg-bank-gradient': isActive,
-                      })}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                        isActive
+                          ? 'bg-[#4a2b20] text-white shadow-sm'
+                          : 'text-[#6f5b52] hover:bg-[#f5eee9] hover:text-[#2b1a14]'
+                      }`}
                     >
                       <Image
                         src={item.imgURL}
-                        alt={item.label}
+                        alt=""
                         width={20}
                         height={20}
-                        className={cn({
-                          'brightness-[3] invert-0': isActive,
-                        })}
+                        className={isActive ? 'brightness-0 invert' : 'opacity-70'}
                       />
-                      <p
-                        className={cn('text-16 font-semibold text-black-2', {
-                          'text-white': isActive,
-                        })}
-                      >
-                        {item.label}
-                      </p>
+                      {item.label}
                     </Link>
                   </SheetClose>
                 );
               })}
             </nav>
 
-            <Footer user={user} type="mobile" />
+            <div className="border-t border-[#eee5df] pt-4">
+              <Footer user={user} type="mobile" />
+            </div>
           </div>
         </SheetContent>
       </Sheet>
