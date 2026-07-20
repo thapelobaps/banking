@@ -6,5 +6,6 @@ public interface IBankingProvider
 {
     string ProviderId { get; }
     BankAccount CreateDefaultDemoAccount(Guid userId, string email);
+    BankAccount CreateSecondaryDemoAccount(Guid userId, string email);
     IReadOnlyCollection<BankTransaction> CreateStarterTransactions(Guid bankAccountId);
 }
