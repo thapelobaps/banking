@@ -15,12 +15,6 @@ public sealed class AccountsController(IAccountService accountService) : ApiCont
         CancellationToken cancellationToken) =>
         Ok(await accountService.GetAccountsAsync(CurrentUserId, cancellationToken));
 
-    [HttpPost("demo/ensure")]
-    [ProducesResponseType<IReadOnlyList<AccountResponseDto>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<AccountResponseDto>>> EnsureDemoAccounts(
-        CancellationToken cancellationToken) =>
-        Ok(await accountService.EnsureDemoAccountsAsync(CurrentUserId, cancellationToken));
-
     [HttpGet("demo-recipient/{accountId:guid}")]
     [ProducesResponseType<RecipientPreviewResponseDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
