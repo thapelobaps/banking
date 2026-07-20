@@ -25,6 +25,18 @@ public sealed class AccountService(
         Guid accountId,
         CancellationToken cancellationToken)
     {
+        var virtualRecipient = DemoRecipientDirectory.Find(accountId);
+        if (virtualRecipient is not null)
+        {
+            return new RecipientPreviewResponseDto(
+                virtualRecipient.Id,
+                virtualRecipient.BankName,
+                virtualRecipient.AccountMask,
+                virtualRecipient.AccountType,
+                virtualRecipient.Currency,
+                true);
+        }
+
         var account = await bankAccountRepository.GetDemoAccountAsync(
             accountId,
             cancellationToken)
