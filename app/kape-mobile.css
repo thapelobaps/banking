@@ -96,12 +96,24 @@
     max-width: 100%;
   }
 
+  .kape-activity-accordion,
+  .kape-transaction-accordion {
+    width: 100%;
+    min-width: 0;
+  }
+
   details > summary {
+    user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
 
   details[open] > summary {
     background: #fbf7f4;
+  }
+
+  .kape-activity-accordion[open] > summary .kape-activity-chevron,
+  .kape-transaction-accordion[open] > summary .kape-transaction-chevron {
+    transform: rotate(180deg);
   }
 
   details > summary:focus-visible {
