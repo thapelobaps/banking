@@ -1,23 +1,405 @@
 /*
- * Keep the account rail available on laptop displays whose Windows scaling
- * reduces the browser's CSS viewport below 1280px.
+ * Desktop density target: make the dashboard at browser 100% match the
+ * previous comfortable 80% appearance, without CSS transforms or zoom hacks.
  */
-@media (min-width: 1024px) and (max-width: 1279px) {
+
+html:has(.kape-shell) {
+  font-size: 13px;
+}
+
+.kape-shell {
+  grid-template-columns: 168px minmax(0, 1fr);
+}
+
+.kape-sidebar__inner {
+  padding: 10px 8px;
+}
+
+.kape-brand {
+  min-height: 34px;
+  gap: 7px;
+  padding-inline: 5px;
+}
+
+.kape-brand__mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.kape-brand__mark img {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.kape-brand__copy strong {
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.kape-brand__copy small {
+  font-size: 7px;
+}
+
+.kape-sidebar__nav {
+  margin-top: 16px;
+}
+
+.kape-nav-link {
+  height: 32px;
+  gap: 7px;
+  border-radius: 8px;
+  padding-inline: 8px;
+  font-size: 11px;
+}
+
+.kape-nav-link img {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.kape-sidebar__footer {
+  padding-top: 9px;
+}
+
+.kape-user {
+  grid-template-columns: 27px minmax(0, 1fr) 24px;
+  gap: 6px;
+}
+
+.kape-user__avatar {
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  font-size: 8px;
+}
+
+.kape-user__details strong {
+  font-size: 9px;
+  line-height: 12px;
+}
+
+.kape-user__details small {
+  font-size: 7px;
+  line-height: 10px;
+}
+
+.kape-user__logout {
+  width: 24px;
+  height: 24px;
+}
+
+.kape-page {
+  gap: 11px;
+  padding: 11px;
+}
+
+.kape-page-header {
+  gap: 10px;
+}
+
+.header-box-title {
+  font-size: clamp(19px, 1.5vw, 23px) !important;
+}
+
+.header-box-subtext {
+  font-size: 10px !important;
+}
+
+.kape-page-actions {
+  gap: 6px;
+}
+
+.kape-button {
+  min-height: 30px;
+  border-radius: 8px;
+  padding-inline: 10px;
+  font-size: 10px;
+}
+
+.kape-overview-grid {
+  grid-template-columns: minmax(215px, 255px) minmax(0, 1fr);
+  gap: 11px;
+}
+
+.kape-section-heading {
+  margin-bottom: 6px;
+}
+
+.kape-section-heading h2 {
+  font-size: 11px;
+}
+
+.kape-section-heading p,
+.kape-section-heading a {
+  font-size: 8px;
+}
+
+.kape-rail {
+  min-width: 0;
+  overflow-x: hidden;
+  padding: 9px;
+}
+
+.kape-rail__profile {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 7px;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.kape-rail__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 8px;
+}
+
+.kape-rail__identity strong {
+  font-size: 9px;
+}
+
+.kape-rail__identity span {
+  font-size: 7px;
+}
+
+.kape-rail__workspace {
+  margin-top: 6px;
+  border-radius: 9px;
+  padding: 6px 8px;
+}
+
+.kape-rail__workspace span:first-child {
+  font-size: 7px;
+}
+
+.kape-rail__workspace strong {
+  font-size: 9px;
+}
+
+.kape-rail__status {
+  width: 6px;
+  height: 6px;
+  flex-basis: 6px;
+}
+
+.kape-rail__section {
+  margin-top: 10px;
+}
+
+.kape-rail__heading {
+  margin-bottom: 5px;
+}
+
+.kape-rail__heading h2 {
+  font-size: 10px;
+}
+
+.kape-rail__heading p,
+.kape-rail__heading a {
+  font-size: 7px;
+}
+
+.kape-account-summary {
+  min-height: 126px;
+  border-radius: 12px;
+  padding: 9px;
+}
+
+.kape-account-summary__label {
+  font-size: 6px;
+}
+
+.kape-account-summary__top {
+  margin-top: 3px;
+}
+
+.kape-account-summary__top span {
+  font-size: 9px;
+}
+
+.kape-account-summary__top small {
+  font-size: 6px;
+}
+
+.kape-account-summary__balance-label,
+.kape-account-summary__holder,
+.kape-account-summary__bottom {
+  font-size: 7px;
+}
+
+.kape-account-summary > div > strong,
+.kape-account-summary > strong {
+  font-size: 15px;
+  line-height: 18px;
+}
+
+.kape-category-list {
+  gap: 4px;
+}
+
+.kape-category-row {
+  gap: 6px;
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.kape-category-row__number {
+  width: 20px;
+  height: 20px;
+  flex-basis: 20px;
+  border-radius: 6px;
+  font-size: 7px;
+}
+
+.kape-category-row__content strong,
+.kape-category-row__content span {
+  font-size: 7px;
+}
+
+/* Full desktop: both sidebars remain visible from 1024 CSS pixels upward. */
+@media (min-width: 1024px) {
+  .kape-shell {
+    grid-template-columns: 168px minmax(0, 1fr);
+  }
+
+  .kape-brand__copy {
+    display: flex;
+  }
+
+  .kape-nav-link span {
+    display: inline;
+  }
+
+  .kape-nav-link {
+    justify-content: flex-start;
+  }
+
+  .kape-user {
+    grid-template-columns: 27px minmax(0, 1fr) 24px;
+    justify-content: initial;
+  }
+
+  .kape-user__details {
+    display: flex;
+  }
+
+  .kape-user__logout {
+    display: flex;
+  }
+
   .kape-dashboard {
-    grid-template-columns: minmax(0, 1fr) 214px;
+    grid-template-columns: minmax(0, 1fr) 196px;
   }
 
   .kape-rail {
     display: block;
-    padding: 10px;
   }
+}
 
+/* Give the centre content a stable single column on scaled laptop displays. */
+@media (min-width: 1024px) and (max-width: 1199px) {
   .kape-overview-grid,
   .kape-transfer-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .kape-account-summary {
-    min-height: 144px;
+  .kape-primary-account {
+    max-width: 270px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr) 204px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .kape-shell {
+    grid-template-columns: 176px minmax(0, 1fr);
+  }
+
+  .kape-dashboard {
+    grid-template-columns: minmax(0, 1fr) 218px;
+  }
+}
+
+/* Tablet uses an icon rail and removes the secondary account rail. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  html:has(.kape-shell) {
+    font-size: 14px;
+  }
+
+  .kape-shell {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .kape-sidebar__inner {
+    padding-inline: 6px;
+  }
+
+  .kape-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .kape-brand__copy,
+  .kape-nav-link span,
+  .kape-user__details {
+    display: none;
+  }
+
+  .kape-nav-link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .kape-user {
+    grid-template-columns: 27px;
+    justify-content: center;
+  }
+
+  .kape-user__logout,
+  .kape-rail {
+    display: none;
+  }
+
+  .kape-dashboard,
+  .kape-overview-grid,
+  .kape-transfer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  html:has(.kape-shell) {
+    font-size: 14px;
+  }
+
+  .kape-shell {
+    display: block;
+  }
+
+  .kape-rail {
+    display: none;
+  }
+
+  .kape-page {
+    gap: 10px;
+    padding: 10px 9px 18px;
+  }
+
+  .kape-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-box-title {
+    font-size: 20px !important;
+  }
+
+  .header-box-subtext {
+    font-size: 11px !important;
   }
 }
