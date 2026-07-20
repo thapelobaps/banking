@@ -17,41 +17,43 @@ const MyBanks = async () => {
   const availableBalance = accountList.reduce((sum, account) => sum + account.availableBalance, 0);
 
   return (
-    <section className="my-banks">
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+    <section className="kape-page">
+      <div className="kape-page-header">
         <HeaderBox
           title="Accounts"
           subtext="Manage and review your SQL-backed South African demo accounts."
         />
-        <div className="rounded-2xl border border-[#eadfd8] bg-white px-5 py-3 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a8378]">Available across accounts</p>
-          <p className="mt-1 text-xl font-semibold text-[#2b1a14] tabular-nums">{formatAmount(availableBalance)}</p>
+        <div className="kape-balance-pill">
+          <span>Available across accounts</span>
+          <strong>{formatAmount(availableBalance)}</strong>
         </div>
       </div>
 
       {accountList.length > 0 ? (
         <>
-          <section className="grid gap-4 sm:grid-cols-3">
-            <article className="rounded-3xl border border-[#eadfd8] bg-white p-5 shadow-sm">
-              <p className="text-sm text-[#8a756b]">Total accounts</p>
-              <p className="mt-3 text-3xl font-semibold text-[#2b1a14]">{accountList.length}</p>
+          <section className="kape-account-metrics">
+            <article>
+              <span>Total accounts</span>
+              <strong>{accountList.length}</strong>
             </article>
-            <article className="rounded-3xl border border-[#eadfd8] bg-white p-5 shadow-sm">
-              <p className="text-sm text-[#8a756b]">Account type</p>
-              <p className="mt-3 text-lg font-semibold capitalize text-[#2b1a14]">{accountList[0]?.subtype ?? 'transaction'}</p>
+            <article>
+              <span>Account type</span>
+              <strong className="capitalize">{accountList[0]?.subtype ?? 'transaction'}</strong>
             </article>
-            <article className="rounded-3xl border border-[#eadfd8] bg-[#4a2b20] p-5 text-white shadow-sm">
-              <p className="text-sm text-white/65">Environment</p>
-              <p className="mt-3 text-lg font-semibold">Kape demo banking</p>
+            <article className="is-primary">
+              <span>Environment</span>
+              <strong>Kape demo banking</strong>
             </article>
           </section>
 
           <section>
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[#2b1a14]">Your accounts</h2>
-              <p className="mt-1 text-sm text-[#8a756b]">Open an account to view its transaction history.</p>
+            <div className="kape-section-heading">
+              <div>
+                <h2>Your accounts</h2>
+                <p>Open an account to view its transaction history.</p>
+              </div>
             </div>
-            <div className="grid gap-7 xl:grid-cols-2 2xl:grid-cols-3">
+            <div className="kape-account-grid">
               {accountList.map((account: Account) => (
                 <BankCard
                   key={account.id}
@@ -63,9 +65,9 @@ const MyBanks = async () => {
           </section>
         </>
       ) : (
-        <div className="rounded-3xl border border-dashed border-[#d8c8be] bg-white p-12 text-center">
-          <p className="font-semibold text-[#2b1a14]">No demo accounts are available</p>
-          <p className="mt-2 text-sm text-[#8a756b]">Accounts created through the API will appear here.</p>
+        <div className="kape-empty-state">
+          <strong>No demo accounts are available</strong>
+          <span>Accounts created through the API will appear here.</span>
         </div>
       )}
     </section>
