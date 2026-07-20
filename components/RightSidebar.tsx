@@ -1,82 +1,98 @@
 'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
-import BankCard from './BankCard';
-import { countTransactionCategories } from '@/lib/utils';
-import Category from './Category';
-import { createMockBank } from '@/lib/actions/user.actions'; // New action for mock bank creation
+import { countTransactionCategories, formatAmount } from '@/lib/utils';
 import { CategoryCount, RightSidebarProps } from '@/types';
 
 const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
-  const categories: CategoryCount[] = countTransactionCategories(transactions);
-
-  const handleAddBank = async () => {
-    // Create a mock bank for the user
-    try {
-      await createMockBank({ userId: user.userId, email: user.email });
-      // Optionally, refresh the page or update state to reflect the new bank
-    } catch (error) {
-      console.error('Error creating mock bank:', error);
-    }
-  };
+  const categories: CategoryCount[] = countTransactionCategories(transactions).slice(0, 4);
+  const primaryAccount = banks[0];
 
   return (
-    <aside className="right-sidebar">
-      <section className="flex flex-col pb-8">
-        <div className="profile-banner" />
-        <div className="profile">
-          <div className="profile-img">
-            <span className="text-5xl font-bold text-blue-500">{user.firstName[0]}</span>
-          </div>
-          <div className="profile-details">
-            <h1 className="profile-name">
-              {user.firstName} {user.lastName}
-            </h1>
-            <p className="profile-email">{user.email}</p>
-          </div>
+    <aside className="kape-rail">
+      <section className="kape-rail__profile">
+        <div className="kape-rail__avatar" aria-hidden="true">
+          {user.firstName[0]}{user.lastName[0]}
+        </div>
+        <div className="kape-rail__identity">
+          <strong>{user.firstName} {user.lastName}</strong>
+          <span>{user.email}</span>
         </div>
       </section>
 
-      <section className="banks">
-        <div className="flex w-full justify-between">
-          <h2 className="header-2">My Banks</h2>
-          <button onClick={handleAddBank} className="flex gap-2 cursor-pointer">
-            <Image src="/icons/plus.svg" width={20} height={20} alt="plus" />
-            <h2 className="text-14 font-semibold text-gray-600">Add Bank</h2>
-          </button>
+      <section className="kape-rail__workspace">
+        <div>
+          <span>Workspace</span>
+          <strong>Personal demo</strong>
+        </div>
+        <span className="kape-rail__status" aria-label="Demo workspace active" />
+      </section>
+
+      <section className="kape-rail__section">
+        <div className="kape-rail__heading">
+          <div>
+            <h2>Primary account</h2>
+            <p>SQL Server demo data</p>
+          </div>
+          <Link href="/my-banks">View all</Link>
         </div>
 
-        {banks?.length > 0 && (
-          <div className="relative flex flex-1 flex-col items-center justify-center gap-5">
-            <div className="relative z-10">
-              <BankCard
-                key={banks[0].$id}
-                account={banks[0]}
-                userName={`${user.firstName} ${user.lastName}`}
-                showBalance={false}
-              />
+        {primaryAccount ? (
+          <Link href={`/transaction-history?id=${primaryAccount.id}`} className="kape-account-summary">
+            <div className="kape-account-summary__label">Kape demo account</div>
+            <div className="kape-account-summary__top">
+              <span>{primaryAccount.name}</span>
+              <small>Demo</small>
             </div>
-            {banks[1] && (
-              <div className="absolute right-0 top-8 z-0 w-[90%]">
-                <BankCard
-                  key={banks[1].$id}
-                  account={banks[1]}
-                  userName={`${user.firstName} ${user.lastName}`}
-                  showBalance={false}
-                />
-              </div>
-            )}
-          </div>
+            <div>
+              <span className="kape-account-summary__balance-label">Current balance</span>
+              <strong>{formatAmount(primaryAccount.currentBalance)}</strong>
+            </div>
+            <div className="kape-account-summary__holder">{user.firstName} {user.lastName}</div>
+            <div className="kape-account-summary__bottom">
+              <span>•••• •••• •••• {primaryAccount.mask}</span>
+              <span className="kape-account-summary__network">
+                <Image src="/icons/Paypass.svg" width={13} height={16} alt="Contactless" className="brightness-0 invert" />
+                <Image src="/icons/mastercard.svg" width={28} height={20} alt="Card network" />
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <p className="kape-empty-small">No demo accounts available.</p>
         )}
+      </section>
 
-        <div className="mt-10 flex flex-1 flex-col gap-6">
-          <h2 className="header-2">Top categories</h2>
-          <div className="space-y-5">
-            {categories.map((category, index) => (
-              <Category key={category.name} category={category} />
-            ))}
+      <section className="kape-rail__section">
+        <div className="kape-rail__heading">
+          <div>
+            <h2>Spending categories</h2>
+            <p>Based on recent activity</p>
           </div>
+        </div>
+
+        <div className="kape-category-list">
+          {categories.length > 0 ? (
+            categories.map((category, index) => {
+              const percentage = Math.max(12, Math.round((category.count / category.totalCount) * 100));
+              return (
+                <div key={category.name} className="kape-category-row">
+                  <span className="kape-category-row__number">{index + 1}</span>
+                  <div className="kape-category-row__content">
+                    <div>
+                      <strong>{category.name}</strong>
+                      <span>{category.count}</span>
+                    </div>
+                    <div className="kape-category-row__track">
+                      <div style={{ width: `${percentage}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="kape-empty-small">No transaction categories yet.</p>
+          )}
         </div>
       </section>
     </aside>

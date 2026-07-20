@@ -5,22 +5,21 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { cn, formUrlQuery, formatAmount, getAccountTypeColors } from '@/lib/utils';
 import { BankInfoProps } from '@/types';
 
-const BankInfo = ({ account, appwriteItemId, type }: BankInfoProps) => {
+const BankInfo = ({ account, accountId, type }: BankInfoProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const isActive = appwriteItemId === account?.appwriteItemId;
+  const isActive = accountId === account.id;
 
   const handleBankChange = () => {
     const newUrl = formUrlQuery({
       params: searchParams.toString(),
       key: 'id',
-      value: account?.appwriteItemId,
+      value: account.id,
     });
     router.push(newUrl, { scroll: false });
   };
 
-  const colors = getAccountTypeColors(account?.type || 'depository');
+  const colors = getAccountTypeColors(account.type || 'depository');
 
   return (
     <div
@@ -32,22 +31,22 @@ const BankInfo = ({ account, appwriteItemId, type }: BankInfoProps) => {
       })}
     >
       <figure className={`flex-center h-fit rounded-full bg-blue-100 ${colors.lightBg}`}>
-        <Image src="/icons/connect-bank.svg" width={20} height={20} alt={account?.subtype || 'bank'} className="m-2 min-w-5" />
+        <Image src="/icons/connect-bank.svg" width={20} height={20} alt={account.subtype || 'bank'} className="m-2 min-w-5" />
       </figure>
       <div className="flex w-full flex-1 flex-col justify-center gap-1">
         <div className="bank-info_content">
           <h2 className={`text-16 line-clamp-1 flex-1 font-bold text-blue-900 ${colors.title}`}>
-            {account?.name || 'Demo Bank'}
+            {account.name || 'Demo Bank'}
           </h2>
           {type === 'full' && (
             <p className={`text-12 rounded-full px-3 py-1 font-medium text-blue-700 ${colors.subText} ${colors.lightBg}`}>
-              {account?.subtype || 'checking'}
+              {account.subtype || 'transaction'}
             </p>
           )}
         </div>
 
         <p className={`text-16 font-medium text-blue-700 ${colors.subText}`}>
-          {formatAmount(account?.currentBalance || 0)}
+          {formatAmount(account.currentBalance || 0)}
         </p>
       </div>
     </div>

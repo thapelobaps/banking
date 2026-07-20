@@ -1,19 +1,16 @@
-"use client";
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
-import { createTransfer } from "@/lib/actions/dwolla.actions";
-import { createTransaction } from "@/lib/actions/transaction.actions";
-import { getBank, getBankByAccountId } from "@/lib/actions/user.actions";
-import { decryptId } from "@/lib/utils";
-
-import { BankDropdown } from "./BankDropdown";
-import { Button } from "./ui/button";
+import { createMockTransfer } from '@/lib/actions/bank.actions';
+import { PaymentTransferFormProps } from '@/types';
+import { BankDropdown } from './BankDropdown';
+import { Button } from './ui/button';
 import {
   Form,
   FormControl,
@@ -22,17 +19,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "./ui/form";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { PaymentTransferFormProps } from "@/types";
+} from './ui/form';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  name: z.string().min(4, "Transfer note is too short"),
-  amount: z.string().min(4, "Amount is too short"),
-  senderBank: z.string().min(4, "Please select a valid bank account"),
-  sharableId: z.string().min(8, "Please select a valid sharable Id"),
+  name: z.string().trim().max(120, 'Transfer note must be 120 characters or fewer').optional().default(''),
+  amount: z
+    .string()
+    .trim()
+    .refine((value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0, 'Enter a valid amount greater than R0.00'),
+  senderBank: z.string().uuid('Select a valid source account'),
+  recipientReference: z.string().uuid('Enter a valid demo account reference'),
 });
 
 const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
@@ -42,209 +40,152 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      amount: "",
-      senderBank: "",
-      sharableId: "",
+      name: '',
+      amount: '',
+      senderBank: accounts[0]?.id ?? '',
+      recipientReference: '',
     },
   });
 
   const submit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    form.clearErrors('root');
 
     try {
-      const receiverAccountId = decryptId(data.sharableId);
-      const receiverBank = await getBankByAccountId({
-        accountId: receiverAccountId,
-      });
-      const senderBank = await getBank({ documentId: data.senderBank });
-
-      const transferParams = {
-        sourceFundingSourceUrl: senderBank.fundingSourceUrl,
-        destinationFundingSourceUrl: receiverBank.fundingSourceUrl,
-        amount: data.amount,
-      };
-      // create transfer
-      const transfer = await createTransfer(transferParams);
-
-      // create transfer transaction
-      if (transfer) {
-        const transaction = {
-          name: data.name,
-          amount: data.amount,
-          senderId: senderBank.userId.$id,
-          senderBankId: senderBank.$id,
-          receiverId: receiverBank.userId.$id,
-          receiverBankId: receiverBank.$id,
-          email: data.email,
-        };
-
-        const newTransaction = await createTransaction(transaction);
-
-        if (newTransaction) {
-          form.reset();
-          router.push("/");
-        }
+      if (data.senderBank === data.recipientReference) {
+        form.setError('recipientReference', { message: 'Choose a different recipient account' });
+        return;
       }
-    } catch (error) {
-      console.error("Submitting create transfer request failed: ", error);
-    }
 
-    setIsLoading(false);
+      await createMockTransfer({
+        senderBankId: data.senderBank,
+        receiverBankId: data.recipientReference,
+        amount: Number(data.amount),
+        name: data.name || 'Demo transfer',
+      });
+
+      form.reset({
+        name: '',
+        amount: '',
+        senderBank: accounts[0]?.id ?? '',
+        recipientReference: '',
+      });
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      form.setError('root', {
+        message: error instanceof Error ? error.message : 'The simulated transfer failed. No real money was moved.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const sectionClass = 'rounded-xl border border-[#eee5df] bg-[#fdfaf8] p-3.5';
+  const inputClass = 'h-10 rounded-lg border-[#ddcec5] bg-white text-sm text-[#2b1a14] placeholder:text-[#aa968c] focus-visible:ring-[#7a4a37]';
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(submit)} className="flex flex-col">
-        <FormField
-          control={form.control}
-          name="senderBank"
-          render={() => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item pb-6 pt-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    Select Source Bank
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Select the bank account you want to transfer funds from
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <BankDropdown
-                      accounts={accounts}
-                      setValue={form.setValue}
-                      otherStyles="!w-full"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item pb-6 pt-5">
-                <div className="payment-transfer_form-content">
-                  <FormLabel className="text-14 font-medium text-gray-700">
-                    Transfer Note (Optional)
-                  </FormLabel>
-                  <FormDescription className="text-12 font-normal text-gray-600">
-                    Please provide any additional information or instructions
-                    related to the transfer
-                  </FormDescription>
-                </div>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <Textarea
-                      placeholder="Write a short note here"
-                      className="input-class"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        <div className="payment-transfer_form-details">
-          <h2 className="text-18 font-semibold text-gray-900">
-            Bank account details
-          </h2>
-          <p className="text-16 font-normal text-gray-600">
-            Enter the bank account details of the recipient
-          </p>
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-3.5">
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold">Demo transfer only</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-amber-800">
+              This updates SQL Server demo balances only. No live bank connection or real money movement occurs.
+            </p>
+          </div>
         </div>
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item py-5">
-                <FormLabel className="text-14 w-full max-w-[280px] font-medium text-gray-700">
-                  Recipient&apos;s Email Address
-                </FormLabel>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <Input
-                      placeholder="ex: johndoe@gmail.com"
-                      className="input-class"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
+        <div className="grid gap-3.5 xl:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="senderBank"
+            render={() => (
+              <FormItem className={sectionClass}>
+                <div className="mb-2.5">
+                  <FormLabel className="text-xs font-semibold text-[#2b1a14]">From account</FormLabel>
+                  <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">Select the demo account to debit.</FormDescription>
                 </div>
-              </div>
-            </FormItem>
-          )}
-        />
+                <FormControl>
+                  <BankDropdown accounts={accounts} setValue={form.setValue} otherStyles="!w-full" />
+                </FormControl>
+                <FormMessage className="text-[10px] text-red-600" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="sharableId"
-          render={({ field }) => (
-            <FormItem className="border-t border-gray-200">
-              <div className="payment-transfer_form-item pb-5 pt-6">
-                <FormLabel className="text-14 w-full max-w-[280px] font-medium text-gray-700">
-                  Receiver&apos;s Plaid Sharable Id
-                </FormLabel>
-                <div className="flex w-full flex-col">
+          <FormField
+            control={form.control}
+            name="recipientReference"
+            render={({ field }) => (
+              <FormItem className={sectionClass}>
+                <FormLabel className="text-xs font-semibold text-[#2b1a14]">Recipient account reference</FormLabel>
+                <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">Paste the reference from the recipient card.</FormDescription>
+                <FormControl>
+                  <Input placeholder="e.g. 3451f061-..." className={`mt-2.5 ${inputClass}`} autoComplete="off" {...field} />
+                </FormControl>
+                <FormMessage className="text-[10px] text-red-600" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-3.5 lg:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem className={sectionClass}>
+                <FormLabel className="text-xs font-semibold text-[#2b1a14]">Amount in rand</FormLabel>
+                <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">Use up to two decimal places.</FormDescription>
+                <div className="relative mt-2.5">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#6b4435]">R</span>
                   <FormControl>
-                    <Input
-                      placeholder="Enter the public account number"
-                      className="input-class"
-                      {...field}
-                    />
+                    <Input inputMode="decimal" placeholder="250.00" className={`${inputClass} pl-8`} {...field} />
                   </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
                 </div>
-              </div>
-            </FormItem>
-          )}
-        />
+                <FormMessage className="text-[10px] text-red-600" />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem className="border-y border-gray-200">
-              <div className="payment-transfer_form-item py-5">
-                <FormLabel className="text-14 w-full max-w-[280px] font-medium text-gray-700">
-                  Amount
-                </FormLabel>
-                <div className="flex w-full flex-col">
-                  <FormControl>
-                    <Input
-                      placeholder="ex: 5.00"
-                      className="input-class"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-12 text-red-500" />
-                </div>
-              </div>
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem className={sectionClass}>
+                <FormLabel className="text-xs font-semibold text-[#2b1a14]">Payment reference</FormLabel>
+                <FormDescription className="mt-0.5 text-[11px] text-[#8a756b]">Add an optional transfer note.</FormDescription>
+                <FormControl>
+                  <Textarea placeholder="e.g. Shared groceries" className="mt-2.5 min-h-10 rounded-lg border-[#ddcec5] bg-white text-sm text-[#2b1a14] placeholder:text-[#aa968c] focus-visible:ring-[#7a4a37]" {...field} />
+                </FormControl>
+                <FormMessage className="text-[10px] text-red-600" />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        <div className="payment-transfer_btn-box">
-          <Button type="submit" className="payment-transfer_btn">
+        {form.formState.errors.root?.message && (
+          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            {form.formState.errors.root.message}
+          </p>
+        )}
+
+        <div className="flex justify-end pt-1">
+          <Button
+            type="submit"
+            className="h-10 w-full rounded-lg bg-[#4a2b20] px-5 text-xs font-semibold text-white shadow-sm hover:bg-[#382017] sm:w-auto"
+            disabled={isLoading || accounts.length === 0}
+          >
             {isLoading ? (
               <>
-                <Loader2 size={20} className="animate-spin" /> &nbsp; Sending...
+                <Loader2 size={15} className="mr-2 animate-spin" /> Simulating transfer
               </>
             ) : (
-              "Transfer Funds"
+              <>
+                Review and transfer <ArrowRight size={15} className="ml-2" />
+              </>
             )}
           </Button>
         </div>

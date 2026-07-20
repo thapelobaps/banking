@@ -1,22 +1,32 @@
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-import type { Metadata } from "next";
-import { Inter, IBM_Plex_Serif } from "next/font/google";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import { Inter, IBM_Plex_Serif } from 'next/font/google';
+import './globals.css';
+import './kape-theme.css';
+import './kape-responsive-fix.css';
+import './kape-desktop-rail.css';
+import './kape-density-90.css';
+import './kape-mobile.css';
 
-const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const ibmPlexSerif = IBM_Plex_Serif({
   subsets: ['latin'],
   weight: ['400', '700'],
-  variable: '--font-ibm-plex-serif'
-})
+  variable: '--font-ibm-plex-serif',
+});
 
 export const metadata: Metadata = {
-  title: "Horizon",
-  description: "Horizon is a modern banking platform for everyone.",
+  title: 'Kape App',
+  description: 'A South African personal finance experience powered by ASP.NET Core and SQL Server.',
   icons: {
-    icon: '/icons/logo.svg'
-  }
+    icon: '/icons/logo.svg',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -25,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en-ZA">
       <body className={`${inter.variable} ${ibmPlexSerif.variable}`}>{children}</body>
     </html>
   );

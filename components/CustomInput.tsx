@@ -2,8 +2,17 @@ import React from 'react';
 import { FormControl, FormField, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { Control, FieldPath, FieldValues } from 'react-hook-form';
-import { z } from 'zod';
-import { authFormSchema } from '@/lib/utils';
+
+type CustomInputProps<T extends FieldValues> = {
+  control: Control<T>;
+  name: FieldPath<T>;
+  label: string;
+  placeholder: string;
+  type?: React.HTMLInputTypeAttribute;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  autoComplete?: string;
+  maxLength?: number;
+};
 
 const CustomInput = <T extends FieldValues>({
   control,
@@ -11,13 +20,10 @@ const CustomInput = <T extends FieldValues>({
   label,
   placeholder,
   type = 'text',
-}: {
-  control: Control<T>;
-  name: FieldPath<T>;
-  label: string;
-  placeholder: string;
-  type?: string;
-}) => {
+  inputMode,
+  autoComplete,
+  maxLength,
+}: CustomInputProps<T>) => {
   return (
     <FormField
       control={control}
@@ -31,8 +37,13 @@ const CustomInput = <T extends FieldValues>({
                 placeholder={placeholder}
                 className="input-class"
                 type={type}
-                value={field.value ?? ''} // Ensure string or empty string
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value)}
+                inputMode={inputMode}
+                autoComplete={autoComplete}
+                maxLength={maxLength}
+                value={field.value ?? ''}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                  field.onChange(event.target.value)
+                }
                 onBlur={field.onBlur}
                 name={field.name}
                 ref={field.ref}

@@ -3,28 +3,33 @@ import { type ClassValue, clsx } from 'clsx';
 import qs from 'query-string';
 import { twMerge } from 'tailwind-merge';
 import { z } from 'zod';
-import { CategoryCount, Transaction, User } from '@/types';
+import { CategoryCount, SouthAfricanProvince, Transaction } from '@/types';
 
-const usStates = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-];
+export const SOUTH_AFRICAN_PROVINCES = [
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'North West',
+  'Northern Cape',
+  'Western Cape',
+] as const satisfies readonly SouthAfricanProvince[];
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const formatDateTime = (dateString: Date) => {
+export const formatDateTime = (dateString: Date | string) => {
   const dateTimeOptions: Intl.DateTimeFormatOptions = {
     weekday: 'short',
+    year: 'numeric',
     month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true,
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   };
 
   const dateDayOptions: Intl.DateTimeFormatOptions = {
@@ -35,41 +40,36 @@ export const formatDateTime = (dateString: Date) => {
   };
 
   const dateOptions: Intl.DateTimeFormatOptions = {
-    month: 'short',
     year: 'numeric',
-    day: 'numeric',
+    month: 'short',
+    day: '2-digit',
   };
 
   const timeOptions: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   };
 
-  const formattedDateTime: string = new Date(dateString).toLocaleString('en-US', dateTimeOptions);
-  const formattedDateDay: string = new Date(dateString).toLocaleString('en-US', dateDayOptions);
-  const formattedDate: string = new Date(dateString).toLocaleString('en-US', dateOptions);
-  const formattedTime: string = new Date(dateString).toLocaleString('en-US', timeOptions);
+  const date = new Date(dateString);
 
   return {
-    dateTime: formattedDateTime,
-    dateDay: formattedDateDay,
-    dateOnly: formattedDate,
-    timeOnly: formattedTime,
+    dateTime: date.toLocaleString('en-ZA', dateTimeOptions),
+    dateDay: date.toLocaleString('en-ZA', dateDayOptions),
+    dateOnly: date.toLocaleString('en-ZA', dateOptions),
+    timeOnly: date.toLocaleString('en-ZA', timeOptions),
   };
 };
 
 export function formatAmount(amount: number): string {
-  const formatter = new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-ZA', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'ZAR',
     minimumFractionDigits: 2,
-  });
-
-  return formatter.format(amount);
+  }).format(amount);
 }
 
-export const parseStringify = (value: any) => JSON.parse(JSON.stringify(value));
+export const parseStringify = (value: unknown) => JSON.parse(JSON.stringify(value));
 
 export const removeSpecialCharacters = (value: string) => {
   return value.replace(/[^\w\s]/gi, '');
@@ -114,34 +114,22 @@ export function getAccountTypeColors(type: string) {
 }
 
 export function countTransactionCategories(transactions: Transaction[]): CategoryCount[] {
-  const categoryCounts: { [category: string]: number } = {};
+  const categoryCounts: Record<string, number> = {};
   let totalCount = 0;
 
-  transactions &&
-    transactions.forEach((transaction) => {
-      const category = transaction.category;
-      if (categoryCounts.hasOwnProperty(category)) {
-        categoryCounts[category]++;
-      } else {
-        categoryCounts[category] = 1;
-      }
-      totalCount++;
-    });
+  transactions.forEach((transaction) => {
+    categoryCounts[transaction.category] = (categoryCounts[transaction.category] ?? 0) + 1;
+    totalCount += 1;
+  });
 
-  const aggregatedCategories: CategoryCount[] = Object.keys(categoryCounts).map((category) => ({
-    name: category,
-    count: categoryCounts[category],
-    totalCount,
-  }));
-
-  aggregatedCategories.sort((a, b) => b.count - a.count);
-  return aggregatedCategories;
+  return Object.keys(categoryCounts)
+    .map((category) => ({
+      name: category,
+      count: categoryCounts[category],
+      totalCount,
+    }))
+    .sort((a, b) => b.count - a.count);
 }
-
-export const extractCustomerIdFromUrl = (url: string) => {
-  const parts = url.split('/');
-  return parts[parts.length - 1];
-};
 
 export function encryptId(id: string) {
   return btoa(id);
@@ -158,80 +146,99 @@ export const getTransactionStatus = (date: Date) => {
   return date > twoDaysAgo ? 'Processing' : 'Success';
 };
 
-export const authFormSchema = (type: 'sign-in' | 'sign-up') =>
-  z.object({
-    email: z.string().email('Invalid email address').transform((val) => val.toLowerCase()),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    ...(type === 'sign-up' && {
-      firstName: z.string().min(3, 'First name must be at least 3 characters'),
-      lastName: z.string().min(3, 'Last name must be at least 3 characters'),
-      address1: z.string().min(1, 'Address is required').max(50, 'Address must be at most 50 characters'),
-      city: z.string().min(1, 'City is required').max(50, 'City must be at most 50 characters'),
-      state: z
-        .string()
-        .length(2, 'State must be a 2-letter code (e.g., NY)')
-        .refine((val) => usStates.includes(val.toUpperCase()), {
-          message: 'State must be a valid US state code (e.g., NY, CA)',
-        }),
-      postalCode: z.string().regex(/^\d{5}$/, 'Postal code must be exactly 5 digits'),
-      dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be in YYYY-MM-DD format'),
-      ssn: z.string().regex(/^\d{4}$/, 'SSN must be the last 4 digits'),
+const stripSouthAfricanPhoneFormatting = (value: string) =>
+  value.trim().replace(/[\s()-]/g, '');
+
+export const normaliseSouthAfricanMobile = (value: string) => {
+  const compact = stripSouthAfricanPhoneFormatting(value);
+
+  if (/^0[6-8]\d{8}$/.test(compact)) {
+    return `+27${compact.slice(1)}`;
+  }
+
+  if (/^\+27[6-8]\d{8}$/.test(compact)) {
+    return compact;
+  }
+
+  return compact;
+};
+
+export const isValidSouthAfricanMobile = (value: string) =>
+  /^\+27[6-8]\d{8}$/.test(normaliseSouthAfricanMobile(value));
+
+export const parseSouthAfricanDateToIso = (value: string) => {
+  const trimmed = value.trim();
+  const displayMatch = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+
+  if (!displayMatch && !isoMatch) return null;
+
+  const dayText = displayMatch?.[1] ?? isoMatch![3];
+  const monthText = displayMatch?.[2] ?? isoMatch![2];
+  const yearText = displayMatch?.[3] ?? isoMatch![1];
+  const day = Number(dayText);
+  const month = Number(monthText);
+  const year = Number(yearText);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date > new Date()
+  ) {
+    return null;
+  }
+
+  return `${yearText}-${monthText}-${dayText}`;
+};
+
+export const signInSchema = z.object({
+  email: z.string().trim().email('Enter a valid email address').transform((value) => value.toLowerCase()),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export const signUpSchema = z
+  .object({
+    firstName: z.string().trim().min(2, 'First name must be at least 2 characters').max(50),
+    lastName: z.string().trim().min(2, 'Surname must be at least 2 characters').max(50),
+    email: z.string().trim().email('Enter a valid email address').transform((value) => value.toLowerCase()),
+    mobileNumber: z
+      .string()
+      .trim()
+      .refine(isValidSouthAfricanMobile, 'Enter a valid South African mobile number')
+      .transform(normaliseSouthAfricanMobile),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Za-z]/, 'Password must contain a letter')
+      .regex(/\d/, 'Password must contain a number'),
+    confirmPassword: z.string().min(1, 'Confirm your password'),
+    address1: z.string().trim().min(3, 'Address line 1 is required').max(100),
+    suburb: z.string().trim().min(2, 'Suburb is required').max(60),
+    city: z.string().trim().min(2, 'City or town is required').max(60),
+    province: z.enum(SOUTH_AFRICAN_PROVINCES, {
+      required_error: 'Select a province',
     }),
+    postalCode: z.string().trim().regex(/^\d{4}$/, 'Postal code must be exactly 4 digits'),
+    dateOfBirth: z
+      .string()
+      .trim()
+      .refine((value) => parseSouthAfricanDateToIso(value) !== null, 'Use a valid DD/MM/YYYY date')
+      .transform((value) => parseSouthAfricanDateToIso(value)!),
+    country: z.literal('South Africa').default('South Africa'),
+    termsAccepted: z.boolean().refine((value) => value, 'You must accept the terms'),
+    privacyAccepted: z.boolean().refine((value) => value, 'You must acknowledge the privacy notice'),
+  })
+  .superRefine(({ password, confirmPassword }, context) => {
+    if (password !== confirmPassword) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: 'Passwords do not match',
+      });
+    }
   });
 
-export const getMockBankAccount = (email: string) => {
-  const mockAccount = {
-    accountId: `mock_${email}_${Date.now()}`,
-    accountNumber: '1234567890',
-    routingNumber: '111000614',
-    bankName: 'Demo Bank',
-    balance: 1000.0,
-    currency: 'USD',
-    linkedAt: new Date().toISOString(),
-  };
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`mock_bank_${email}`, JSON.stringify(mockAccount));
-  }
-  return mockAccount;
-};
-
-export const retrieveMockBankAccount = (email: string) => {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(`mock_bank_${email}`);
-    return stored ? JSON.parse(stored) : null;
-  }
-  return null;
-};
-
-export const getMockTransactions = (user: User) => {
-  return [
-    {
-      id: `tx_${Date.now()}_1`,
-      $id: `tx_${Date.now()}_1`,
-      name: 'Demo Purchase',
-      paymentChannel: 'card',
-      type: 'debit',
-      accountId: `mock_${user.email}_${Date.now()}`,
-      amount: 50.0,
-      createdAt: new Date().toISOString(),
-      category: 'Shopping',
-      date: new Date().toISOString().split('T')[0],
-      image: '/icons/shopping-bag.svg',
-      typeIcon: '/icons/debit.svg',
-    },
-    {
-      id: `tx_${Date.now()}_2`,
-      $id: `tx_${Date.now()}_2`,
-      name: 'Demo Transfer',
-      paymentChannel: 'bank',
-      type: 'credit',
-      accountId: `mock_${user.email}_${Date.now()}`,
-      amount: 200.0,
-      createdAt: new Date().toISOString(),
-      category: 'Transfer',
-      date: new Date().toISOString().split('T')[0],
-      image: '/icons/transfer.svg',
-      typeIcon: '/icons/credit.svg',
-    },
-  ];
-};
+export const authFormSchema = (type: 'sign-in' | 'sign-up') =>
+  type === 'sign-up' ? signUpSchema : signInSchema;

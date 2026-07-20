@@ -1,13 +1,11 @@
 'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Footer from './Footer';
 import { sidebarLinks } from '@/constants';
-import { createMockBank } from '@/lib/actions/user.actions';
-import { useState } from 'react';
-
-import type { User,  } from '@/types';
+import type { User } from '@/types';
 
 type SidebarProps = {
   user: User;
@@ -15,64 +13,49 @@ type SidebarProps = {
 
 const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleAddBank = async () => {
-    setIsLoading(true);
-    try {
-      await createMockBank({ userId: user.userId, email: user.email });
-      // Optionally, refresh the page or update state to reflect the new bank
-      window.location.reload(); // Simple refresh; consider a state update for better UX
-    } catch (error) {
-      console.error('Error creating mock bank:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
-    <aside className="sidebar">
-      <div className="flex flex-col size-full gap-4">
-        <Link href="/" className="sidebar-logo">
-          <Image src="/icons/logo.svg" alt="logo" width={180} height={28} />
+    <aside className="kape-sidebar">
+      <div className="kape-sidebar__inner">
+        <Link href="/" className="kape-brand" aria-label="Kape App home">
+          <span className="kape-brand__mark">
+            <Image src="/icons/logo.svg" alt="" width={22} height={22} className="brightness-0 invert" />
+          </span>
+          <span className="kape-brand__copy">
+            <strong>Kape</strong>
+            <small>Money, simplified</small>
+          </span>
         </Link>
 
-        <nav className="sidebar-nav">
-          <ul className="sidebar-nav_elements">
+        <nav className="kape-sidebar__nav" aria-label="Main navigation">
+          <ul>
             {sidebarLinks.map((item) => {
               const isActive = pathname === item.route || pathname.startsWith(`${item.route}/`);
               return (
-                <li
-                  key={item.route}
-                  className={`sidebar-nav_element group ${isActive ? 'bg-blue-500 text-white' : 'text-gray-700'}`}
-                >
-                  <Link className="sidebar-link" href={item.route}>
+                <li key={item.route}>
+                  <Link
+                    className={`kape-nav-link ${isActive ? 'is-active' : ''}`}
+                    href={item.route}
+                    title={item.label}
+                  >
                     <Image
                       src={item.imgURL}
-                      alt={item.label}
-                      width={24}
-                      height={24}
-                      className={`${isActive && 'brightness-200'}`}
+                      alt=""
+                      width={18}
+                      height={18}
+                      className={isActive ? 'brightness-0 invert' : 'opacity-70'}
                     />
-                    {item.label}
+                    <span>{item.label}</span>
                   </Link>
                 </li>
               );
             })}
-            <li className="sidebar-nav_element">
-              <button
-                onClick={handleAddBank}
-                disabled={isLoading}
-                className="flex gap-2 items-center p-4 text-gray-700 hover:bg-blue-100"
-              >
-                <Image src="/icons/plus.svg" alt="plus" width={24} height={24} />
-                <span>{isLoading ? 'Adding Bank...' : 'Add Bank'}</span>
-              </button>
-            </li>
           </ul>
         </nav>
 
-        <Footer user={user} />
+        <div className="kape-sidebar__footer">
+          <Footer user={user} />
+        </div>
       </div>
     </aside>
   );
