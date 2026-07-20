@@ -33,9 +33,34 @@ public sealed class SouthAfricanDemoBankingProvider : IBankingProvider
             BankName = bank.Name,
             AccountNumber = $"DEMO-{bank.Id.ToUpperInvariant()}-{suffix}",
             BranchCode = bank.BranchCode,
-            AccountType = hash % 4 == 0 ? "savings" : "transaction",
+            AccountType = "transaction",
             CurrentBalance = 12_500m + (hash % 7_500),
             AvailableBalance = 11_900m + (hash % 7_000),
+            Currency = "ZAR",
+            IsDemo = true,
+        };
+    }
+
+    public BankAccount CreateSecondaryDemoAccount(Guid userId, string email)
+    {
+        var hash = StableHash(email);
+        var primaryBankIndex = hash % Banks.Length;
+        var bank = Banks[(primaryBankIndex + 1) % Banks.Length];
+        var suffix = ((hash * 7L + 137) % 1_000_000).ToString("D6");
+        var balance = 4_500m + (hash % 2_500);
+
+        return new BankAccount
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ProviderId = ProviderId,
+            BankId = bank.Id,
+            BankName = $"{bank.Name} Savings",
+            AccountNumber = $"DEMO-{bank.Id.ToUpperInvariant()}-SAVE-{suffix}",
+            BranchCode = bank.BranchCode,
+            AccountType = "savings",
+            CurrentBalance = balance,
+            AvailableBalance = balance,
             Currency = "ZAR",
             IsDemo = true,
         };
