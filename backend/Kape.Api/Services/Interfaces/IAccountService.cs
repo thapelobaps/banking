@@ -8,10 +8,6 @@ public interface IAccountService
         Guid userId,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<AccountResponseDto>> EnsureDemoAccountsAsync(
-        Guid userId,
-        CancellationToken cancellationToken);
-
     Task<RecipientPreviewResponseDto> GetRecipientPreviewAsync(
         Guid accountId,
         CancellationToken cancellationToken);
