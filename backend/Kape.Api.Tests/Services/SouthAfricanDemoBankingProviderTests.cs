@@ -41,4 +41,19 @@ public sealed class SouthAfricanDemoBankingProviderTests
         Assert.Equal(first.CurrentBalance, second.CurrentBalance);
         Assert.Equal(first.AvailableBalance, second.AvailableBalance);
     }
+
+    [Fact]
+    public void CreateCompanionDemoAccount_WhenTransactionAccountIsMissing_UsesUniqueAccountNumber()
+    {
+        var userId = Guid.NewGuid();
+        const string email = "bapstaps@gmail.com";
+
+        var legacyDefault = _provider.CreateDefaultDemoAccount(userId, email);
+        var companion = _provider.CreateCompanionDemoAccount(userId, email, "transaction");
+
+        Assert.Equal("transaction", companion.AccountType);
+        Assert.NotEqual(legacyDefault.BankId, companion.BankId);
+        Assert.NotEqual(legacyDefault.AccountNumber, companion.AccountNumber);
+        Assert.Contains("CURRENT", companion.AccountNumber, StringComparison.Ordinal);
+    }
 }
