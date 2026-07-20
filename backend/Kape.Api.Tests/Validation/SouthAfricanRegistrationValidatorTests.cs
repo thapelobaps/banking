@@ -1,5 +1,6 @@
 using Kape.Api.DTOs.Auth;
 using Kape.Api.Validation;
+using Xunit;
 
 namespace Kape.Api.Tests.Validation;
 
