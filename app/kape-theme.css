@@ -1,0 +1,146 @@
+:root {
+  color-scheme: light;
+  --kape-bg: #f8f5f2;
+  --kape-surface: #ffffff;
+  --kape-border: #eadfd8;
+  --kape-text: #2b1a14;
+  --kape-muted: #8a756b;
+  --kape-primary: #4a2b20;
+}
+
+html,
+body {
+  background: var(--kape-bg);
+  color: var(--kape-text);
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.home {
+  min-height: 100vh;
+  background: var(--kape-bg);
+}
+
+.home-content,
+.my-banks,
+.transactions,
+.payment-transfer {
+  width: 100%;
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--kape-bg);
+}
+
+.home-content,
+.my-banks,
+.transactions,
+.payment-transfer {
+  gap: 28px;
+}
+
+.my-banks,
+.transactions,
+.payment-transfer {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.right-sidebar {
+  width: 360px !important;
+  min-width: 360px;
+  border-left: 1px solid var(--kape-border) !important;
+}
+
+.sidebar {
+  width: 270px !important;
+  min-width: 270px;
+  padding: 24px 16px 18px !important;
+  border-right: 1px solid var(--kape-border) !important;
+  background: var(--kape-surface) !important;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start !important;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px !important;
+  border-radius: 14px;
+}
+
+.sidebar-label {
+  display: inline !important;
+  color: inherit !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.header-box {
+  gap: 6px !important;
+}
+
+.header-box-title {
+  color: var(--kape-text) !important;
+  font-size: clamp(28px, 4vw, 40px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.035em;
+  font-weight: 700 !important;
+}
+
+.header-box-subtext {
+  max-width: 680px;
+  color: var(--kape-muted) !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+.input-class {
+  min-height: 48px;
+  border-radius: 12px !important;
+  border-color: #ddcec5 !important;
+  background: #fff !important;
+}
+
+.root-layout {
+  height: 72px !important;
+  border-bottom: 1px solid var(--kape-border);
+  background: #fff;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1535px) {
+  .sidebar {
+    width: 92px !important;
+    min-width: 92px;
+    padding-inline: 14px !important;
+  }
+
+  .sidebar-link {
+    justify-content: center !important;
+  }
+
+  .sidebar-label {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1279px) {
+  .right-sidebar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .home-content,
+  .my-banks,
+  .transactions,
+  .payment-transfer {
+    min-height: calc(100vh - 72px);
+    padding: 22px 18px 36px;
+  }
+}
