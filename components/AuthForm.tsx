@@ -32,6 +32,7 @@ import {
   SOUTH_AFRICAN_PROVINCES,
 } from '@/lib/utils';
 import { signIn, signUp } from '@/lib/actions/user.actions';
+import type { SignUpParams } from '@/types';
 import CustomInput from './CustomInput';
 
 type AuthFormValues = z.input<typeof signUpSchema>;
@@ -68,15 +69,16 @@ const AuthForm = ({ type }: { type: 'sign-in' | 'sign-up' }) => {
 
     try {
       if (type === 'sign-up') {
-        const registrationData = signUpSchema.parse(data);
-        await signUp(registrationData);
+        await signUp(data as SignUpParams);
         router.replace('/');
         router.refresh();
         return;
       }
 
-      const credentials = signInSchema.parse(data);
-      const response = await signIn(credentials);
+      const response = await signIn({
+        email: data.email,
+        password: data.password,
+      });
       if (response) {
         router.replace('/');
         router.refresh();
