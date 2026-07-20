@@ -71,10 +71,13 @@ public sealed class AuthService(
             throw new ValidationApiException(MapIdentityErrors(identityResult.Errors));
         }
 
-        var account = bankingProvider.CreateDefaultDemoAccount(user.Id, email);
-        bankAccountRepository.Add(account);
+        var primaryAccount = bankingProvider.CreateDefaultDemoAccount(user.Id, email);
+        var secondaryAccount = bankingProvider.CreateSecondaryDemoAccount(user.Id, email);
+
+        bankAccountRepository.Add(primaryAccount);
+        bankAccountRepository.Add(secondaryAccount);
         transactionRepository.AddRange(
-            bankingProvider.CreateStarterTransactions(account.Id));
+            bankingProvider.CreateStarterTransactions(primaryAccount.Id));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
