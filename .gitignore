@@ -6,6 +6,9 @@
 
 # testing
 /coverage
+**/TestResults/
+*.trx
+coverage.cobertura.xml
 
 # Next.js
 /.next/
