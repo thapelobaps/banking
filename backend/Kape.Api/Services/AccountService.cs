@@ -1,3 +1,4 @@
+using System.Data;
 using Kape.Api.DTOs.Banking;
 using Kape.Api.Exceptions;
 using Kape.Api.Mapping;
@@ -8,7 +9,10 @@ namespace Kape.Api.Services;
 
 public sealed class AccountService(
     IBankAccountRepository bankAccountRepository,
-    ITransactionRepository transactionRepository) : IAccountService
+    ITransactionRepository transactionRepository,
+    IUserRepository userRepository,
+    IUnitOfWork unitOfWork,
+    IBankingProvider bankingProvider) : IAccountService
 {
     public async Task<IReadOnlyList<AccountResponseDto>> GetAccountsAsync(
         Guid userId,
@@ -19,6 +23,65 @@ public sealed class AccountService(
             cancellationToken);
 
         return accounts.Select(account => account.ToDto()).ToList();
+    }
+
+    public async Task<IReadOnlyList<AccountResponseDto>> EnsureDemoAccountsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var accounts = await bankAccountRepository.GetByUserIdAsync(
+            userId,
+            cancellationToken);
+
+        if (accounts.Count >= 2)
+        {
+            return accounts.Select(account => account.ToDto()).ToList();
+        }
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+
+        accounts = await bankAccountRepository.GetByUserIdAsync(
+            userId,
+            cancellationToken);
+
+        if (accounts.Count >= 2)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return accounts.Select(account => account.ToDto()).ToList();
+        }
+
+        var user = await userRepository.GetByIdAsync(userId)
+            ?? throw new UnauthorizedApiException();
+        var email = user.Email ?? user.UserName ?? user.Id.ToString();
+        var provisionedAccounts = accounts.ToList();
+
+        if (!provisionedAccounts.Any(account =>
+                string.Equals(account.AccountType, "transaction", StringComparison.OrdinalIgnoreCase)))
+        {
+            var primaryAccount = bankingProvider.CreateDefaultDemoAccount(userId, email);
+            bankAccountRepository.Add(primaryAccount);
+            transactionRepository.AddRange(
+                bankingProvider.CreateStarterTransactions(primaryAccount.Id));
+            provisionedAccounts.Add(primaryAccount);
+        }
+
+        if (!provisionedAccounts.Any(account =>
+                string.Equals(account.AccountType, "savings", StringComparison.OrdinalIgnoreCase)))
+        {
+            var secondaryAccount = bankingProvider.CreateSecondaryDemoAccount(userId, email);
+            bankAccountRepository.Add(secondaryAccount);
+            provisionedAccounts.Add(secondaryAccount);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return provisionedAccounts
+            .OrderBy(account => account.CreatedAt)
+            .Select(account => account.ToDto())
+            .ToList();
     }
 
     public async Task<RecipientPreviewResponseDto> GetRecipientPreviewAsync(
