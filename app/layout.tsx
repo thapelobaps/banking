@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, IBM_Plex_Serif } from 'next/font/google';
 import './globals.css';
 import './kape-theme.css';
+import './kape-responsive-fix.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const ibmPlexSerif = IBM_Plex_Serif({
