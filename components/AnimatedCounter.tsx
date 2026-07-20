@@ -4,15 +4,17 @@ import CountUp from 'react-countup';
 
 const AnimatedCounter = ({ amount }: { amount: number }) => {
   return (
-    <div className="w-full">
-      <CountUp 
+    <span className="tabular-nums">
+      <CountUp
         decimals={2}
         decimal=","
-        prefix="$"
-        end={amount} 
+        separator=" "
+        prefix="R "
+        end={amount}
+        duration={0.8}
       />
-    </div>
-  )
-}
+    </span>
+  );
+};
 
-export default AnimatedCounter
+export default AnimatedCounter;
