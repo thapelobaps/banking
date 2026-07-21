@@ -254,7 +254,8 @@ public sealed partial class WalletPlatformService
             tracking: true,
             cancellationToken)
             ?? throw new InvalidOperationException("The prepaid order no longer exists.");
-        if (order.Status == "fulfilled")n        {
+        if (order.Status == "fulfilled")
+        {
             return;
         }
 
