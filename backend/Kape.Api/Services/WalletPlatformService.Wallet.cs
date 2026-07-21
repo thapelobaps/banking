@@ -66,7 +66,8 @@ public sealed partial class WalletPlatformService
         CancellationToken cancellationToken)
     {
         ValidatePositiveAmount(request.Amount);
-        var existing = await FindIdempotentTransactionAsync(userId, request.IdempotencyKey, cancellationToken);
+        var idempotencyKey = RequireIdempotencyKey(request.IdempotencyKey);
+        var existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
         if (existing is not null)
         {
             return Map(existing);
@@ -80,6 +81,13 @@ public sealed partial class WalletPlatformService
             IsolationLevel.Serializable,
             cancellationToken);
 
+        existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
+        if (existing is not null)
+        {
+            await databaseTransaction.CommitAsync(cancellationToken);
+            return Map(existing);
+        }
+
         var transaction = new WalletTransaction
         {
             WalletId = wallet.Id,
@@ -92,17 +100,16 @@ public sealed partial class WalletPlatformService
             Status = "completed",
             Reference = NormaliseReference(request.Reference, "Wallet top-up"),
             ExternalReference = $"topup_{Guid.NewGuid():N}",
-            IdempotencyKey = NormaliseIdempotencyKey(request.IdempotencyKey),
+            IdempotencyKey = idempotencyKey,
             CompletedAt = DateTimeOffset.UtcNow,
         };
 
         _repository.Add(transaction);
-        await AddJournalAsync(
-            Guid.NewGuid(),
+        await AddTopUpJournalAsync(
             transaction,
-            CashClearingCode,
             WalletLedgerCode(wallet.Id),
             request.Amount,
+            fee,
             cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
         await databaseTransaction.CommitAsync(cancellationToken);
@@ -130,7 +137,8 @@ public sealed partial class WalletPlatformService
         CancellationToken cancellationToken)
     {
         ValidatePositiveAmount(request.Amount);
-        var existing = await FindIdempotentTransactionAsync(userId, request.IdempotencyKey, cancellationToken);
+        var idempotencyKey = RequireIdempotencyKey(request.IdempotencyKey);
+        var existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
         if (existing is not null)
         {
             return Map(existing);
@@ -144,6 +152,14 @@ public sealed partial class WalletPlatformService
         await using var databaseTransaction = await _unitOfWork.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+
+        existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
+        if (existing is not null)
+        {
+            await databaseTransaction.CommitAsync(cancellationToken);
+            return Map(existing);
+        }
+
         await EnsureSufficientFundsAsync(wallet, totalDebit, cancellationToken);
 
         var transaction = new WalletTransaction
@@ -158,17 +174,17 @@ public sealed partial class WalletPlatformService
             Status = "completed",
             Reference = NormaliseReference(request.Reference, "Wallet withdrawal"),
             ExternalReference = $"withdrawal_{Guid.NewGuid():N}",
-            IdempotencyKey = NormaliseIdempotencyKey(request.IdempotencyKey),
+            IdempotencyKey = idempotencyKey,
             CompletedAt = DateTimeOffset.UtcNow,
         };
 
         _repository.Add(transaction);
-        await AddJournalAsync(
-            Guid.NewGuid(),
+        await AddWalletDebitJournalAsync(
             transaction,
             WalletLedgerCode(wallet.Id),
             WithdrawalClearingCode,
-            totalDebit,
+            request.Amount,
+            fee,
             cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
         await databaseTransaction.CommitAsync(cancellationToken);
@@ -207,7 +223,8 @@ public sealed partial class WalletPlatformService
             throw Validation("recipientUserId", "Choose another Kape user.");
         }
 
-        var existing = await FindIdempotentTransactionAsync(userId, request.IdempotencyKey, cancellationToken);
+        var idempotencyKey = RequireIdempotencyKey(request.IdempotencyKey);
+        var existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
         if (existing is not null)
         {
             return Map(existing);
@@ -221,6 +238,14 @@ public sealed partial class WalletPlatformService
         await using var databaseTransaction = await _unitOfWork.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+
+        existing = await FindWalletTransactionByIdempotencyKeyAsync(userId, idempotencyKey, cancellationToken);
+        if (existing is not null)
+        {
+            await databaseTransaction.CommitAsync(cancellationToken);
+            return Map(existing);
+        }
+
         await EnsureSufficientFundsAsync(senderWallet, request.Amount, cancellationToken);
 
         var reference = NormaliseReference(request.Reference, "Kape wallet transfer");
@@ -236,7 +261,7 @@ public sealed partial class WalletPlatformService
             Status = "completed",
             Reference = reference,
             ExternalReference = $"kape_{Guid.NewGuid():N}",
-            IdempotencyKey = NormaliseIdempotencyKey(request.IdempotencyKey),
+            IdempotencyKey = idempotencyKey,
             CompletedAt = completedAt,
         };
         var recipientTransaction = new WalletTransaction
@@ -387,6 +412,30 @@ public sealed partial class WalletPlatformService
         Guid? linkedBankAccountId,
         CancellationToken cancellationToken) =>
         EnsureFundingSourceAsync(userId, paymentMethodId, linkedBankAccountId, cancellationToken);
+
+    private Task<WalletTransaction?> FindWalletTransactionByIdempotencyKeyAsync(
+        Guid userId,
+        string idempotencyKey,
+        CancellationToken cancellationToken) =>
+        _repository.GetAsync<WalletTransaction>(
+            transaction => transaction.UserId == userId && transaction.IdempotencyKey == idempotencyKey,
+            cancellationToken: cancellationToken);
+
+    private static string RequireIdempotencyKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw Validation("idempotencyKey", "An idempotency key is required for this financial operation.");
+        }
+
+        var value = key.Trim();
+        if (value.Length > 100)
+        {
+            throw Validation("idempotencyKey", "The idempotency key must be 100 characters or fewer.");
+        }
+
+        return value;
+    }
 
     private static decimal CalculateTopUpFee(decimal amount, Guid? paymentMethodId) =>
         paymentMethodId is null ? 0m : decimal.Round(amount * 0.015m, 2, MidpointRounding.AwayFromZero);
