@@ -47,11 +47,7 @@ public static class ServiceCollectionExtensions
                 "ConnectionStrings:SqlServer is required.");
 
         services.AddDbContext<KapeDbContext>(options =>
-            options.UseSqlServer(connectionString, sql =>
-            {
-                sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null);
-                sql.CommandTimeout(30);
-            }));
+            options.UseSqlServer(connectionString, sql => sql.CommandTimeout(30)));
     }
 
     private static void AddIdentity(IServiceCollection services)
