@@ -6,8 +6,18 @@ export const sidebarLinks = [
   },
   {
     imgURL: '/icons/dollar-circle.svg',
+    route: '/wallet',
+    label: 'Kape Wallet',
+  },
+  {
+    imgURL: '/icons/connect-bank.svg',
+    route: '/linked-banks',
+    label: 'Linked Banks',
+  },
+  {
+    imgURL: '/icons/dollar-circle.svg',
     route: '/my-banks',
-    label: 'Accounts',
+    label: 'Demo Accounts',
   },
   {
     imgURL: '/icons/transaction.svg',
