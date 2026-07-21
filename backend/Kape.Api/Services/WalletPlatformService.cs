@@ -86,6 +86,11 @@ public sealed partial class WalletPlatformService : IWalletPlatformService
         {
             wallet = new Wallet { UserId = userId };
             _repository.Add(wallet);
+
+            // Persist the principal first. SQL Server already enforces the
+            // LedgerAccounts.WalletId foreign key, so dependent ledger rows
+            // must never be submitted before the wallet exists.
+            await _repository.SaveChangesAsync(cancellationToken);
         }
 
         await EnsureLedgerAccountsWithinTransactionAsync(wallet, cancellationToken);
