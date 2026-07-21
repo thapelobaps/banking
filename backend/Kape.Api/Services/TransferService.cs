@@ -46,8 +46,15 @@ public sealed class TransferService(
 
         var receiver = await bankAccountRepository.GetDemoAccountAsync(
             request.ReceiverBankAccountId,
-            cancellationToken)
-            ?? throw new NotFoundApiException("The recipient demo account could not be found.");
+            cancellationToken);
+        var virtualRecipient = receiver is null
+            ? DemoRecipientDirectory.Find(request.ReceiverBankAccountId)
+            : null;
+
+        if (receiver is null && virtualRecipient is null)
+        {
+            throw new NotFoundApiException("The recipient demo account could not be found.");
+        }
 
         if (sender.AvailableBalance < request.Amount ||
             sender.CurrentBalance < request.Amount)
@@ -60,22 +67,27 @@ public sealed class TransferService(
 
         sender.CurrentBalance -= request.Amount;
         sender.AvailableBalance -= request.Amount;
-        receiver.CurrentBalance += request.Amount;
-        receiver.AvailableBalance += request.Amount;
+
+        if (receiver is not null)
+        {
+            receiver.CurrentBalance += request.Amount;
+            receiver.AvailableBalance += request.Amount;
+        }
 
         var trimmedReference = request.Reference?.Trim();
         var reference = string.IsNullOrWhiteSpace(trimmedReference)
             ? "Demo transfer"
             : trimmedReference[..Math.Min(trimmedReference.Length, 120)];
         var transferDate = DateTimeOffset.UtcNow;
+        var recipientBankName = receiver?.BankName ?? virtualRecipient!.BankName;
 
         var outgoing = new BankTransaction
         {
             BankAccountId = sender.Id,
-            RelatedBankAccountId = receiver.Id,
+            RelatedBankAccountId = receiver?.Id,
             Name = reference,
             StatementDescription = "DEMO EFT SENT",
-            Beneficiary = receiver.BankName,
+            Beneficiary = recipientBankName,
             Amount = request.Amount,
             Direction = "debit",
             Category = "Transfer",
@@ -83,22 +95,27 @@ public sealed class TransferService(
             TransactionDate = transferDate,
         };
 
-        var incoming = new BankTransaction
-        {
-            BankAccountId = receiver.Id,
-            RelatedBankAccountId = sender.Id,
-            Name = reference,
-            StatementDescription = "DEMO EFT RECEIVED",
-            Beneficiary = sender.BankName,
-            Amount = request.Amount,
-            Direction = "credit",
-            Category = "Transfer",
-            Channel = "EFT",
-            TransactionDate = transferDate,
-        };
-
         transactionRepository.Add(outgoing);
-        transactionRepository.Add(incoming);
+
+        if (receiver is not null)
+        {
+            var incoming = new BankTransaction
+            {
+                BankAccountId = receiver.Id,
+                RelatedBankAccountId = sender.Id,
+                Name = reference,
+                StatementDescription = "DEMO EFT RECEIVED",
+                Beneficiary = sender.BankName,
+                Amount = request.Amount,
+                Direction = "credit",
+                Category = "Transfer",
+                Channel = "EFT",
+                TransactionDate = transferDate,
+            };
+
+            transactionRepository.Add(incoming);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

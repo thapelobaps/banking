@@ -4,12 +4,23 @@ import { getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
 import { redirect } from 'next/navigation';
 
-const Transfer = async () => {
+type TransferPageProps = {
+  searchParams: {
+    id?: string | string[];
+  };
+};
+
+const Transfer = async ({ searchParams }: TransferPageProps) => {
   const loggedIn = await getLoggedInUser();
   if (!loggedIn) redirect('/sign-in');
 
   const accounts = await getAccounts({ userId: loggedIn.userId });
-  const accountsData = accounts?.data ?? [];
+  const requestedAccountId = Array.isArray(searchParams.id) ? searchParams.id[0] : searchParams.id;
+  const rawAccounts = accounts?.data ?? [];
+  const selectedAccount = rawAccounts.find((account) => account.id === requestedAccountId);
+  const accountsData = selectedAccount
+    ? [selectedAccount, ...rawAccounts.filter((account) => account.id !== selectedAccount.id)]
+    : rawAccounts;
 
   return (
     <section className="kape-page">
@@ -38,15 +49,25 @@ const Transfer = async () => {
             <span>How it works</span>
             <h2>Safe demo transfers</h2>
             <p>
-              Kape updates SQL Server demo balances and creates matching debit and credit records. No real bank is contacted.
+              Kape updates SQL Server demo balances and creates demo transaction records. No real bank is contacted.
             </p>
           </article>
+
+          <article>
+            <h3>Recipient choices</h3>
+            <ul>
+              <li>Move money between your transaction and savings accounts.</li>
+              <li>Choose a verified fictional recipient for an external demo EFT.</li>
+              <li>The selected source account is automatically excluded.</li>
+            </ul>
+          </article>
+
           <article>
             <h3>Before you send</h3>
             <ul>
-              <li>Use a different recipient account.</li>
-              <li>Check the recipient demo reference.</li>
+              <li>Check the recipient name and masked account.</li>
               <li>Confirm the amount in South African rand.</li>
+              <li>Review the transfer before final confirmation.</li>
             </ul>
           </article>
         </aside>

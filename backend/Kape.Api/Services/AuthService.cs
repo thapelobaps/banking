@@ -71,10 +71,13 @@ public sealed class AuthService(
             throw new ValidationApiException(MapIdentityErrors(identityResult.Errors));
         }
 
-        var account = bankingProvider.CreateDefaultDemoAccount(user.Id, email);
-        bankAccountRepository.Add(account);
+        var primaryAccount = bankingProvider.CreateDefaultDemoAccount(user.Id, email);
+        var secondaryAccount = bankingProvider.CreateSecondaryDemoAccount(user.Id, email);
+
+        bankAccountRepository.Add(primaryAccount);
+        bankAccountRepository.Add(secondaryAccount);
         transactionRepository.AddRange(
-            bankingProvider.CreateStarterTransactions(account.Id));
+            bankingProvider.CreateStarterTransactions(primaryAccount.Id));
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -105,6 +108,8 @@ public sealed class AuthService(
             throw new UnauthorizedApiException("Invalid email or password.");
         }
 
+        await EnsureTwoDemoAccountsAsync(user, email, cancellationToken);
+
         var (token, expiresAt) = tokenService.CreateAccessToken(user);
         return new AuthResponseDto(token, expiresAt, user.ToDto());
     }
@@ -119,6 +124,56 @@ public sealed class AuthService(
             ?? throw new UnauthorizedApiException();
 
         return user.ToDto();
+    }
+
+    private async Task EnsureTwoDemoAccountsAsync(
+        ApplicationUser user,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var accounts = await bankAccountRepository.GetByUserIdAsync(
+            user.Id,
+            cancellationToken);
+
+        if (accounts.Count >= 2)
+        {
+            return;
+        }
+
+        if (accounts.Count == 0)
+        {
+            var primaryAccount = bankingProvider.CreateDefaultDemoAccount(user.Id, email);
+            var secondaryAccount = bankingProvider.CreateSecondaryDemoAccount(user.Id, email);
+
+            bankAccountRepository.Add(primaryAccount);
+            bankAccountRepository.Add(secondaryAccount);
+            transactionRepository.AddRange(
+                bankingProvider.CreateStarterTransactions(primaryAccount.Id));
+        }
+        else
+        {
+            var existingAccount = accounts[0];
+            var missingAccountType = string.Equals(
+                existingAccount.AccountType,
+                "transaction",
+                StringComparison.OrdinalIgnoreCase)
+                ? "savings"
+                : "transaction";
+            var companionAccount = bankingProvider.CreateCompanionDemoAccount(
+                user.Id,
+                email,
+                missingAccountType);
+
+            bankAccountRepository.Add(companionAccount);
+
+            if (missingAccountType == "transaction")
+            {
+                transactionRepository.AddRange(
+                    bankingProvider.CreateStarterTransactions(companionAccount.Id));
+            }
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private static IReadOnlyDictionary<string, string[]> MapIdentityErrors(

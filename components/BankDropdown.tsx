@@ -3,7 +3,15 @@
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { formUrlQuery, formatAmount } from '@/lib/utils';
 import { Account, BankDropdownProps } from '@/types';
 
@@ -26,29 +34,40 @@ export const BankDropdown = ({ accounts = [], setValue, otherStyles }: BankDropd
     setValue?.('senderBank', id);
   };
 
+  const selectedLabel = selected
+    ? `${selected.name} · •••• ${selected.mask}`
+    : 'Select an account';
+
   return (
     <Select value={selected?.id} onValueChange={handleBankChange}>
-      <SelectTrigger className={`flex h-14 w-full gap-3 rounded-xl border-[#ddcec5] bg-white px-4 text-[#2b1a14] shadow-none focus:ring-[#7a4a37] md:w-[340px] ${otherStyles}`}>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f3ebe6]">
-          <Image src="/icons/credit-card.svg" width={19} height={19} alt="" className="opacity-75" />
+      <SelectTrigger className={`flex h-12 w-full gap-3 rounded-xl border-[#ddcec5] bg-white px-3 text-[#2b1a14] shadow-none focus:ring-[#7a4a37] md:w-[340px] ${otherStyles}`}>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f3ebe6]">
+          <Image src="/icons/credit-card.svg" width={17} height={17} alt="" className="opacity-75" />
         </span>
-        <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-sm font-semibold">{selected?.name || 'Select an account'}</p>
-          {selected && <p className="mt-0.5 text-xs text-[#9a8378]">•••• {selected.mask}</p>}
-        </div>
+        <SelectValue placeholder="Select an account">{selectedLabel}</SelectValue>
       </SelectTrigger>
+
       <SelectContent className={`w-full rounded-2xl border-[#eadfd8] bg-white p-1 shadow-xl md:w-[340px] ${otherStyles}`} align="end">
         <SelectGroup>
-          <SelectLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8378]">Select an account</SelectLabel>
+          <SelectLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8378]">
+            Select an account
+          </SelectLabel>
           {accounts.map((account: Account) => (
-            <SelectItem key={account.id} value={account.id} className="cursor-pointer rounded-xl border-t-0 px-3 py-3 focus:bg-[#f8f3ef]">
-              <div className="flex w-full items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#2b1a14]">{account.name}</p>
-                  <p className="mt-1 text-xs text-[#9a8378]">•••• {account.mask}</p>
-                </div>
-                <p className="text-sm font-semibold text-[#6b4435]">{formatAmount(account.currentBalance)}</p>
-              </div>
+            <SelectItem
+              key={account.id}
+              value={account.id}
+              textValue={`${account.name} ending ${account.mask}`}
+              className="cursor-pointer rounded-xl border-t-0 px-3 py-3 focus:bg-[#f8f3ef]"
+            >
+              <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-[#2b1a14]">{account.name}</span>
+                  <span className="mt-1 block text-xs text-[#9a8378]">•••• {account.mask}</span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold text-[#6b4435]">
+                  {formatAmount(account.currentBalance)}
+                </span>
+              </span>
             </SelectItem>
           ))}
         </SelectGroup>

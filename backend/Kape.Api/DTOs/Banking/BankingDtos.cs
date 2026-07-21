@@ -12,6 +12,14 @@ public sealed record AccountResponseDto(
     string Currency,
     bool IsDemo);
 
+public sealed record RecipientPreviewResponseDto(
+    Guid Id,
+    string BankName,
+    string AccountMask,
+    string AccountType,
+    string Currency,
+    bool IsDemo);
+
 public sealed record TransactionResponseDto(
     Guid Id,
     Guid BankAccountId,

@@ -21,6 +21,40 @@ public sealed class AccountService(
         return accounts.Select(account => account.ToDto()).ToList();
     }
 
+    public async Task<RecipientPreviewResponseDto> GetRecipientPreviewAsync(
+        Guid accountId,
+        CancellationToken cancellationToken)
+    {
+        var virtualRecipient = DemoRecipientDirectory.Find(accountId);
+        if (virtualRecipient is not null)
+        {
+            return new RecipientPreviewResponseDto(
+                virtualRecipient.Id,
+                virtualRecipient.BankName,
+                virtualRecipient.AccountMask,
+                virtualRecipient.AccountType,
+                virtualRecipient.Currency,
+                true);
+        }
+
+        var account = await bankAccountRepository.GetDemoAccountAsync(
+            accountId,
+            cancellationToken)
+            ?? throw new NotFoundApiException("The recipient demo account could not be found.");
+
+        var accountMask = account.AccountNumber.Length <= 4
+            ? account.AccountNumber
+            : account.AccountNumber[^4..];
+
+        return new RecipientPreviewResponseDto(
+            account.Id,
+            account.BankName,
+            accountMask,
+            account.AccountType,
+            account.Currency,
+            account.IsDemo);
+    }
+
     public async Task<IReadOnlyList<TransactionResponseDto>> GetTransactionsAsync(
         Guid userId,
         Guid accountId,
