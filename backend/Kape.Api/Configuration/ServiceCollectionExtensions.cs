@@ -29,6 +29,8 @@ public static class ServiceCollectionExtensions
         services.AddControllers();
         services.AddAuthorization();
         services.AddProblemDetails();
+        services.AddDataProtection();
+        services.AddMemoryCache(options => options.SizeLimit = 10_000);
 
         return services;
     }
@@ -45,7 +47,11 @@ public static class ServiceCollectionExtensions
                 "ConnectionStrings:SqlServer is required.");
 
         services.AddDbContext<KapeDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString, sql =>
+            {
+                sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null);
+                sql.CommandTimeout(30);
+            }));
     }
 
     private static void AddIdentity(IServiceCollection services)
@@ -105,12 +111,24 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWalletPlatformRepository, WalletPlatformRepository>();
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ITransferService, TransferService>();
         services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IWalletPlatformService, WalletPlatformService>();
+        services.AddScoped<IWalletQueue, SqlWalletQueue>();
+        services.AddSingleton<IWalletCache, MemoryWalletCache>();
+        services.AddSingleton<IVoucherCodeProtector, DataProtectionVoucherCodeProtector>();
+        services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
+
         services.AddSingleton<IBankingProvider, SouthAfricanDemoBankingProvider>();
+        services.AddSingleton<IBankAggregationProvider, DemoBankAggregationProvider>();
+        services.AddSingleton<IPaymentTokenizationProvider, DemoPaymentTokenizationProvider>();
+        services.AddSingleton<IDigitalProductProvider, DemoDigitalProductProvider>();
+
+        services.AddHostedService<WalletQueueWorker>();
     }
 
     private static void AddCors(
