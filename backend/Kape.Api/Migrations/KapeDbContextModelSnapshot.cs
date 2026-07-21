@@ -267,12 +267,17 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderId", "ExternalConnectionId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_BankConnections_Provider_External");
 
                     b.HasIndex("UserId", "InstitutionId")
+                        .HasDatabaseName("IX_BankConnections_User_Institution_Active")
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.HasIndex("UserId", "Status");
+                    b.HasIndex("UserId", "Status")
+                        .HasDatabaseName("IX_BankConnections_User_Status");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "Status"), new[] { "InstitutionName", "LastSyncedAt", "ConsentExpiresAt" });
 
                     b.ToTable("BankConnections", (string)null);
                 });
@@ -391,9 +396,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("LinkedBankAccountId", "ExternalDebitOrderId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_DebitOrders_Account_External");
 
-                    b.HasIndex("LinkedBankAccountId", "Status", "NextRunAt");
+                    b.HasIndex("LinkedBankAccountId", "Status", "NextRunAt")
+                        .HasDatabaseName("IX_DebitOrders_Account_Status_NextRun");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("LinkedBankAccountId", "Status", "NextRunAt"), new[] { "MerchantName", "Amount", "Frequency" });
 
                     b.ToTable("DebitOrders", (string)null);
                 });
@@ -420,7 +429,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
 
                     b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
@@ -439,9 +449,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_LedgerAccounts_Code");
 
-                    b.HasIndex("WalletId", "AccountType");
+                    b.HasIndex("WalletId", "AccountType")
+                        .HasDatabaseName("IX_LedgerAccounts_Wallet_Type");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("WalletId", "AccountType"), new[] { "Code", "Currency" });
 
                     b.ToTable("LedgerAccounts", (string)null);
                 });
@@ -480,11 +494,18 @@ namespace Kape.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("JournalId");
+                    b.HasIndex("JournalId")
+                        .HasDatabaseName("IX_LedgerEntries_JournalId");
 
-                    b.HasIndex("WalletTransactionId");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("JournalId"), new[] { "LedgerAccountId", "EntryType", "Amount" });
 
-                    b.HasIndex("LedgerAccountId", "OccurredAt");
+                    b.HasIndex("WalletTransactionId")
+                        .HasDatabaseName("IX_LedgerEntries_WalletTransactionId");
+
+                    b.HasIndex("LedgerAccountId", "OccurredAt")
+                        .HasDatabaseName("IX_LedgerEntries_Account_OccurredAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("LedgerAccountId", "OccurredAt"), new[] { "JournalId", "WalletTransactionId", "EntryType", "Amount", "Reference" });
 
                     b.ToTable("LedgerEntries", (string)null);
                 });
@@ -523,7 +544,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
 
                     b.Property<decimal>("CurrentBalance")
                         .HasPrecision(18, 2)
@@ -551,11 +573,16 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BankConnectionId", "ExternalAccountId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_LinkedBankAccounts_Connection_External");
 
-                    b.HasIndex("UserId", "IsActive");
+                    b.HasIndex("UserId", "IsActive")
+                        .HasDatabaseName("IX_LinkedBankAccounts_User_Active");
 
-                    b.HasIndex("UserId", "BankConnectionId", "LastSyncedAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "IsActive"), new[] { "InstitutionName", "AccountName", "CurrentBalance", "AvailableBalance", "Currency", "LastSyncedAt" });
+
+                    b.HasIndex("UserId", "BankConnectionId", "LastSyncedAt")
+                        .HasDatabaseName("IX_LinkedBankAccounts_User_Connection_SyncedAt");
 
                     b.ToTable("LinkedBankAccounts", (string)null);
                 });
@@ -614,11 +641,18 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("LinkedBankAccountId", "ExternalTransactionId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_LinkedBankTransactions_Account_External");
 
-                    b.HasIndex("LinkedBankAccountId", "PostedAt");
+                    b.HasIndex("LinkedBankAccountId", "PostedAt")
+                        .HasDatabaseName("IX_LinkedBankTransactions_Account_PostedAt");
 
-                    b.HasIndex("UserId", "Category", "PostedAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("LinkedBankAccountId", "PostedAt"), new[] { "Amount", "Direction", "Category", "Status", "MerchantName", "Description" });
+
+                    b.HasIndex("UserId", "Category", "PostedAt")
+                        .HasDatabaseName("IX_LinkedBankTransactions_User_Category_PostedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "Category", "PostedAt"), new[] { "Amount", "Direction" });
 
                     b.ToTable("LinkedBankTransactions", (string)null);
                 });
@@ -654,7 +688,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Last4")
                         .IsRequired()
                         .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)");
+                        .HasColumnType("nchar(4)")
+                        .IsFixedLength();
 
                     b.Property<string>("ProviderId")
                         .IsRequired()
@@ -681,12 +716,17 @@ namespace Kape.Api.Migrations
 
                     b.HasIndex("UserId")
                         .IsUnique()
+                        .HasDatabaseName("UX_PaymentMethods_User_Default")
                         .HasFilter("[IsDefault] = 1");
 
                     b.HasIndex("ProviderId", "TokenReference")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_PaymentMethods_Provider_Token");
 
-                    b.HasIndex("UserId", "Status");
+                    b.HasIndex("UserId", "Status")
+                        .HasDatabaseName("IX_PaymentMethods_User_Status");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "Status"), new[] { "BankName", "Brand", "Last4", "ExpiryMonth", "ExpiryYear", "IsDefault" });
 
                     b.ToTable("PaymentMethods", (string)null);
                 });
@@ -707,7 +747,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("datetimeoffset");
@@ -736,9 +777,15 @@ namespace Kape.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PayeeUserId", "Status", "CreatedAt");
+                    b.HasIndex("PayeeUserId", "Status", "CreatedAt")
+                        .HasDatabaseName("IX_PaymentRequests_Payee_Status_CreatedAt");
 
-                    b.HasIndex("PayerUserId", "Status", "ExpiresAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("PayeeUserId", "Status", "CreatedAt"), new[] { "PayerUserId", "Amount", "ExpiresAt", "Message" });
+
+                    b.HasIndex("PayerUserId", "Status", "ExpiresAt")
+                        .HasDatabaseName("IX_PaymentRequests_Payer_Status_ExpiresAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("PayerUserId", "Status", "ExpiresAt"), new[] { "PayeeUserId", "Amount", "Message" });
 
                     b.ToTable("PaymentRequests", (string)null);
                 });
@@ -770,9 +817,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OperatorKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_PrepaidOperators_Key");
 
-                    b.HasIndex("ProductType", "IsActive");
+                    b.HasIndex("ProductType", "IsActive")
+                        .HasDatabaseName("IX_PrepaidOperators_Type_Active");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("ProductType", "IsActive"), new[] { "Name" });
 
                     b.ToTable("PrepaidOperators", (string)null);
                 });
@@ -835,12 +886,19 @@ namespace Kape.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "CreatedAt");
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("IX_PrepaidOrders_Status_CreatedAt");
 
-                    b.HasIndex("UserId", "CreatedAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "CreatedAt"), new[] { "UserId", "PrepaidProductId" });
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_PrepaidOrders_User_CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "CreatedAt"), new[] { "PrepaidProductId", "Recipient", "Amount", "FeeAmount", "Status" });
 
                     b.HasIndex("UserId", "IdempotencyKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_PrepaidOrders_User_Idempotency");
 
                     b.ToTable("PrepaidOrders", (string)null);
                 });
@@ -891,9 +949,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OperatorId", "ExternalProductId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_PrepaidProducts_Operator_External");
 
-                    b.HasIndex("ProductType", "IsActive");
+                    b.HasIndex("ProductType", "IsActive")
+                        .HasDatabaseName("IX_PrepaidProducts_Type_Active");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("ProductType", "IsActive"), new[] { "OperatorId", "Name", "FixedAmount", "MinimumAmount", "MaximumAmount", "FeeAmount" });
 
                     b.ToTable("PrepaidProducts", (string)null);
                 });
@@ -948,9 +1010,17 @@ namespace Kape.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "LockedAt");
+                    b.HasIndex("Status", "LockedAt")
+                        .HasDatabaseName("IX_QueueMessages_ProcessingLock")
+                        .HasFilter("[Status] = 'processing'");
 
-                    b.HasIndex("QueueName", "Status", "AvailableAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "LockedAt"), new[] { "QueueName", "LockedBy", "Attempts" });
+
+                    b.HasIndex("QueueName", "Status", "AvailableAt", "CreatedAt")
+                        .HasDatabaseName("IX_QueueMessages_Dequeue")
+                        .HasFilter("[Status] = 'pending'");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("QueueName", "Status", "AvailableAt", "CreatedAt"), new[] { "MessageType", "Attempts" });
 
                     b.ToTable("QueueMessages", (string)null);
                 });
@@ -980,9 +1050,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Slug")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_VoucherCategories_Slug");
 
-                    b.HasIndex("IsActive", "SortOrder");
+                    b.HasIndex("IsActive", "SortOrder")
+                        .HasDatabaseName("IX_VoucherCategories_Active_Sort");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsActive", "SortOrder"), new[] { "Name", "Slug" });
 
                     b.ToTable("VoucherCategories", (string)null);
                 });
@@ -1010,7 +1084,8 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("VoucherProductId", "Amount")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_VoucherDenominations_Product_Amount");
 
                     b.ToTable("VoucherDenominations", (string)null);
                 });
@@ -1072,12 +1147,19 @@ namespace Kape.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "CreatedAt");
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("IX_VoucherOrders_Status_CreatedAt");
 
-                    b.HasIndex("UserId", "CreatedAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "CreatedAt"), new[] { "UserId", "VoucherProductId" });
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_VoucherOrders_User_CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "CreatedAt"), new[] { "VoucherProductId", "Amount", "FeeAmount", "Status", "FulfilledAt" });
 
                     b.HasIndex("UserId", "IdempotencyKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_VoucherOrders_User_Idempotency");
 
                     b.ToTable("VoucherOrders", (string)null);
                 });
@@ -1099,7 +1181,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -1140,11 +1223,18 @@ namespace Kape.Api.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("Slug")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_VoucherProducts_Slug");
 
-                    b.HasIndex("BrandName", "ProductName");
+                    b.HasIndex("BrandName", "ProductName")
+                        .HasDatabaseName("IX_VoucherProducts_Brand_Product");
 
-                    b.HasIndex("ProviderId", "CategoryId", "IsActive");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("BrandName", "ProductName"), new[] { "CategoryId", "ProviderId", "IsActive" });
+
+                    b.HasIndex("ProviderId", "CategoryId", "IsActive")
+                        .HasDatabaseName("IX_VoucherProducts_Provider_Category_Active");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("ProviderId", "CategoryId", "IsActive"), new[] { "BrandName", "ProductName", "Currency", "FulfilmentType" });
 
                     b.ToTable("VoucherProducts", (string)null);
                 });
@@ -1176,7 +1266,8 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_VoucherProviders_Key");
 
                     b.ToTable("VoucherProviders", (string)null);
                 });
@@ -1193,7 +1284,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1215,7 +1307,8 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_Wallets_UserId");
 
                     b.ToTable("Wallets", (string)null);
                 });
@@ -1283,11 +1376,18 @@ namespace Kape.Api.Migrations
 
                     b.HasIndex("UserId", "IdempotencyKey")
                         .IsUnique()
+                        .HasDatabaseName("UX_WalletTransactions_User_Idempotency")
                         .HasFilter("[IdempotencyKey] IS NOT NULL");
 
-                    b.HasIndex("WalletId", "CreatedAt");
+                    b.HasIndex("WalletId", "CreatedAt")
+                        .HasDatabaseName("IX_WalletTransactions_Wallet_CreatedAt");
 
-                    b.HasIndex("UserId", "Status", "CreatedAt");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("WalletId", "CreatedAt"), new[] { "Type", "Amount", "FeeAmount", "NetAmount", "Status", "Reference", "RelatedUserId" });
+
+                    b.HasIndex("UserId", "Status", "CreatedAt")
+                        .HasDatabaseName("IX_WalletTransactions_User_Status_CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "Status", "CreatedAt"), new[] { "Type", "NetAmount" });
 
                     b.ToTable("WalletTransactions", (string)null);
                 });
@@ -1340,9 +1440,13 @@ namespace Kape.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProviderType", "ExternalEventId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("UX_WebhookInbox_Provider_Event");
 
-                    b.HasIndex("Status", "ReceivedAt");
+                    b.HasIndex("Status", "ReceivedAt")
+                        .HasDatabaseName("IX_WebhookInbox_Status_ReceivedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "ReceivedAt"), new[] { "ProviderType", "EventType" });
 
                     b.ToTable("WebhookInbox", (string)null);
                 });
