@@ -1,4 +1,3 @@
-using System.Data;
 using System.Linq.Expressions;
 using Kape.Api.Data;
 using Kape.Api.Domain;
@@ -125,33 +124,11 @@ public sealed class WalletPlatformRepository(KapeDbContext dbContext) : IWalletP
         string workerId,
         CancellationToken cancellationToken = default)
     {
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable,
-            cancellationToken);
-
-        var now = DateTimeOffset.UtcNow;
-        var message = await dbContext.QueueMessages
-            .Where(item =>
-                item.QueueName == queueName &&
-                item.Status == "pending" &&
-                item.AvailableAt <= now)
-            .OrderBy(item => item.AvailableAt)
-            .ThenBy(item => item.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (message is null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return null;
-        }
-
-        message.Status = "processing";
-        message.LockedAt = now;
-        message.LockedBy = workerId;
-        message.Attempts++;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return message;
+        var messages = await dbContext.QueueMessages
+            .FromSqlInterpolated($"EXEC dbo.sp_DequeueWalletMessage @QueueName={queueName}, @WorkerId={workerId}")
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return messages.FirstOrDefault();
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
