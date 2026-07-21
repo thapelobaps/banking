@@ -10,6 +10,26 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
 {
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
+    public DbSet<BankConnection> BankConnections => Set<BankConnection>();
+    public DbSet<LinkedBankAccount> LinkedBankAccounts => Set<LinkedBankAccount>();
+    public DbSet<LinkedBankTransaction> LinkedBankTransactions => Set<LinkedBankTransaction>();
+    public DbSet<DebitOrder> DebitOrders => Set<DebitOrder>();
+    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
+    public DbSet<Wallet> Wallets => Set<Wallet>();
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+    public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<VoucherCategory> VoucherCategories => Set<VoucherCategory>();
+    public DbSet<VoucherProvider> VoucherProviders => Set<VoucherProvider>();
+    public DbSet<VoucherProduct> VoucherProducts => Set<VoucherProduct>();
+    public DbSet<VoucherDenomination> VoucherDenominations => Set<VoucherDenomination>();
+    public DbSet<VoucherOrder> VoucherOrders => Set<VoucherOrder>();
+    public DbSet<PrepaidOperator> PrepaidOperators => Set<PrepaidOperator>();
+    public DbSet<PrepaidProduct> PrepaidProducts => Set<PrepaidProduct>();
+    public DbSet<PrepaidOrder> PrepaidOrders => Set<PrepaidOrder>();
+    public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
+    public DbSet<WebhookInbox> WebhookInbox => Set<WebhookInbox>();
+    public DbSet<QueueMessage> QueueMessages => Set<QueueMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -65,5 +85,7 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
                 .HasForeignKey(transaction => transaction.BankAccountId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        builder.ConfigureWalletPlatform();
     }
 }
