@@ -73,21 +73,30 @@ public sealed partial class WalletPlatformService : IWalletPlatformService
 
     private async Task<Wallet> EnsureWalletAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var wallet = await _repository.GetAsync<Wallet>(item => item.UserId == userId, cancellationToken: cancellationToken);
-        if (wallet is not null)
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+
+        var wallet = await _repository.GetAsync<Wallet>(
+            item => item.UserId == userId,
+            tracking: true,
+            cancellationToken);
+
+        if (wallet is null)
         {
-            await EnsureLedgerAccountsAsync(wallet, cancellationToken);
-            return wallet;
+            wallet = new Wallet { UserId = userId };
+            _repository.Add(wallet);
         }
 
-        wallet = new Wallet { UserId = userId };
-        _repository.Add(wallet);
+        await EnsureLedgerAccountsWithinTransactionAsync(wallet, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
-        await EnsureLedgerAccountsAsync(wallet, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return wallet;
     }
 
-    private async Task EnsureLedgerAccountsAsync(Wallet wallet, CancellationToken cancellationToken)
+    private async Task EnsureLedgerAccountsWithinTransactionAsync(
+        Wallet wallet,
+        CancellationToken cancellationToken)
     {
         var walletCode = WalletLedgerCode(wallet.Id);
         var required = new[]
@@ -99,7 +108,6 @@ public sealed partial class WalletPlatformService : IWalletPlatformService
             (PrepaidSettlementCode, "Prepaid settlement", "expense", true, null, null),
         };
 
-        var changed = false;
         foreach (var item in required)
         {
             if (await _repository.AnyAsync<LedgerAccount>(account => account.Code == item.Item1, cancellationToken))
@@ -116,12 +124,6 @@ public sealed partial class WalletPlatformService : IWalletPlatformService
                 WalletId = item.Item5,
                 UserId = item.Item6,
             });
-            changed = true;
-        }
-
-        if (changed)
-        {
-            await _repository.SaveChangesAsync(cancellationToken);
         }
     }
 
