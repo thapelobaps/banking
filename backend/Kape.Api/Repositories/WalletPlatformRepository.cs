@@ -74,7 +74,17 @@ public sealed class WalletPlatformRepository(KapeDbContext dbContext) : IWalletP
     public void AddRange<T>(IEnumerable<T> entities) where T : class =>
         dbContext.Set<T>().AddRange(entities);
 
-    public void Remove<T>(T entity) where T : class => dbContext.Set<T>().Remove(entity);
+    public void Remove<T>(T entity) where T : class
+    {
+        if (entity is PaymentMethod paymentMethod)
+        {
+            paymentMethod.Status = "removed";
+            paymentMethod.IsDefault = false;
+            return;
+        }
+
+        dbContext.Set<T>().Remove(entity);
+    }
 
     public async Task<decimal> GetLedgerAccountBalanceAsync(
         Guid ledgerAccountId,
