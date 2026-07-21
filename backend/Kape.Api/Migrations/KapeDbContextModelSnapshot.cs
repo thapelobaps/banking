@@ -429,7 +429,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nchar(3)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
                         .IsFixedLength();
 
                     b.Property<bool>("IsSystem")
@@ -544,7 +545,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nchar(3)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
                         .IsFixedLength();
 
                     b.Property<decimal>("CurrentBalance")
@@ -688,7 +690,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Last4")
                         .IsRequired()
                         .HasMaxLength(4)
-                        .HasColumnType("nchar(4)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(4)")
                         .IsFixedLength();
 
                     b.Property<string>("ProviderId")
@@ -747,7 +750,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nchar(3)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
                         .IsFixedLength();
 
                     b.Property<DateTimeOffset>("ExpiresAt")
@@ -1181,7 +1185,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nchar(3)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
                         .IsFixedLength();
 
                     b.Property<string>("Description")
@@ -1284,7 +1289,8 @@ namespace Kape.Api.Migrations
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nchar(3)")
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
                         .IsFixedLength();
 
                     b.Property<byte[]>("RowVersion")
