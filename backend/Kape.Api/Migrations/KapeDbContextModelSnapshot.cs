@@ -1619,6 +1619,14 @@ namespace Kape.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Kape.Api.Domain.LedgerAccount", b =>
+                {
+                    b.HasOne("Kape.Api.Domain.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
             modelBuilder.Entity("Kape.Api.Domain.LedgerEntry", b =>
                 {
                     b.HasOne("Kape.Api.Domain.LedgerAccount", null)
