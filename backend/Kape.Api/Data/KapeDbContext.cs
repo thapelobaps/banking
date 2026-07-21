@@ -87,6 +87,7 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
         });
 
         builder.ConfigureWalletPlatform();
+        builder.ApplyWalletPlatformRelationships();
         builder.ApplyWalletPlatformStorageAlignment();
     }
 }
