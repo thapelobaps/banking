@@ -135,9 +135,9 @@ export default async function Home() {
 
       <section className="overview-hero">
         <div className="overview-hero__balance">
-          <span className="overview-eyebrow"><WalletCards size={16} /> Available across Kape</span>
+          <span className="overview-eyebrow"><WalletCards size={16} /> Visible available balances</span>
           <strong>{formatAmount(visibleAvailableBalance)}</strong>
-          <p>Kape wallet plus provider-reported available linked balances</p>
+          <p>Kape wallet plus provider-reported linked balances. This consolidated view does not treat connected balances as new money.</p>
           <div className="overview-hero__badges">
             <span>{wallet.status}</span>
             <span>{wallet.currency}</span>
