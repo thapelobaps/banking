@@ -67,4 +67,18 @@ public sealed class WalletPlatformModelTests
         Assert.True(index.IsUnique);
         Assert.Equal([nameof(Wallet.UserId)], index.Properties.Select(property => property.Name).ToArray());
     }
+
+    [Fact]
+    public void LedgerAccountModel_MapsWalletForeignKeyForInsertOrdering()
+    {
+        using var context = CreateContext();
+        var entity = context.Model.FindEntityType(typeof(LedgerAccount))!;
+        var walletForeignKey = entity.GetForeignKeys()
+            .Single(candidate => candidate.PrincipalEntityType.ClrType == typeof(Wallet));
+
+        Assert.Equal(
+            [nameof(LedgerAccount.WalletId)],
+            walletForeignKey.Properties.Select(property => property.Name).ToArray());
+        Assert.Equal(DeleteBehavior.NoAction, walletForeignKey.DeleteBehavior);
+    }
 }
