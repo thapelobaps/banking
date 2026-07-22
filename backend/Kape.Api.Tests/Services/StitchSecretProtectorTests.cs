@@ -16,7 +16,7 @@ public sealed class StitchSecretProtectorTests
 
         var protectedPayload = protector.Protect(plaintext);
 
-        Assert.DoesNotContain(plaintext, protectedPayload, StringComparison.Ordinal);
+        Assert.False(protectedPayload.Contains(plaintext, StringComparison.Ordinal));
         Assert.Equal(plaintext, protector.Unprotect(protectedPayload));
     }
 
