@@ -75,6 +75,28 @@ public sealed class StitchSecretMigrationTests
         Assert.Contains("ISDELETED = 1", sql);
     }
 
+    [Fact]
+    public void DemoInstitutionMigration_ScopesConnectionsAndDeactivatesCrossBankAccounts()
+    {
+        var migration = new DemoInstitutionScopedAccounts();
+        var migrationBuilder = new MigrationBuilder("Microsoft.EntityFrameworkCore.SqlServer");
+        var upMethod = typeof(DemoInstitutionScopedAccounts).GetMethod(
+            "Up",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(upMethod);
+        upMethod!.Invoke(migration, new object[] { migrationBuilder });
+
+        var sql = GetSql(migrationBuilder);
+
+        Assert.Contains("|INSTITUTION=", sql);
+        Assert.Contains("PROVIDERID = 'DEMO-BANK-AGGREGATOR'", sql);
+        Assert.Contains("LINKEDBANKACCOUNTS", sql);
+        Assert.Contains("ACCOUNT.ISACTIVE = 0", sql);
+        Assert.Contains("ACCOUNT.INSTITUTIONNAME", sql);
+        Assert.Contains("CONNECTION.INSTITUTIONNAME", sql);
+    }
+
     private static string GetSql(MigrationBuilder migrationBuilder) =>
         string.Join(
                 Environment.NewLine,
