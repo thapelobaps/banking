@@ -45,6 +45,7 @@ export type PaymentMethod = {
 };
 
 export type WalletFundingOperation = 'top_up' | 'withdrawal';
+export type WalletOperation = WalletFundingOperation | 'wallet_transfer';
 
 export type WalletFundingInput = {
   operation: WalletFundingOperation;
@@ -56,13 +57,26 @@ export type WalletFundingInput = {
 };
 
 export type WalletFundingQuote = {
-  operation: WalletFundingOperation;
+  operation: WalletOperation;
   amount: number;
   feeAmount: number;
   totalAmount: number;
   currency: 'ZAR';
   status: string;
   expiresAt: string;
+};
+
+export type ResolvedKapeUser = {
+  userId: string;
+  displayName: string;
+  maskedIdentifier: string;
+};
+
+export type WalletTransferInput = {
+  recipientUserId: string;
+  amount: number;
+  reference?: string | null;
+  idempotencyKey?: string | null;
 };
 
 export type LedgerReconciliation = {
