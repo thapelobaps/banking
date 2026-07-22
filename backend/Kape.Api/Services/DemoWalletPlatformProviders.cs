@@ -53,7 +53,8 @@ public sealed class DemoBankAggregationProvider : IBankAggregationProvider
         cancellationToken.ThrowIfCancellationRequested();
         var (baseConnectionId, institutionId) = ParseConnectionId(externalConnectionId);
         var institution = ResolveInstitution(institutionId);
-        var suffix = unchecked((uint)baseConnectionId.GetHashCode(StringComparison.Ordinal));
+        var connectionHash = baseConnectionId.GetHashCode(StringComparison.Ordinal);
+        var suffix = connectionHash == int.MinValue ? int.MaxValue : Math.Abs(connectionHash);
         var accountSuffix = institution.Id == "standard-bank" ? "standard" : institution.Id;
         var accountId = $"linked-{accountSuffix}-{suffix}";
         var accountMask = (1000 + suffix % 9000).ToString("D4");
