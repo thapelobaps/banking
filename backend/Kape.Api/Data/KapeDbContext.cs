@@ -89,5 +89,8 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
         builder.ConfigureWalletPlatform();
         builder.ApplyWalletPlatformRelationships();
         builder.ApplyWalletPlatformStorageAlignment();
+
+        builder.Entity<BankConnection>()
+            .ToTable("BankConnections", tableBuilder => tableBuilder.UseSqlOutputClause(false));
     }
 }
