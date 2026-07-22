@@ -4,8 +4,14 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, IBM_Plex_Serif } from 'next/font/google';
 import './globals.css';
 import './kape-theme.css';
+import './kape-wallet-ui.css';
+import './kape-overview-ui.css';
+import './kape-integrated-money-pages.css';
+import './kape-source-cards.css';
+import './kape-svg-card-faces.css';
 import './kape-responsive-fix.css';
 import './kape-desktop-rail.css';
+import './kape-unified-rail.css';
 import './kape-density-90.css';
 import './kape-mobile.css';
 

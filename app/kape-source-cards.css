@@ -1,0 +1,463 @@
+.money-source-carousel {
+  min-width: 0;
+}
+
+.money-source-carousel__viewport {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 8px 4px 18px;
+  overscroll-behavior-inline: contain;
+}
+
+.money-source-carousel__viewport::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.money-source-card {
+  --source-card-fg: #fff;
+  --source-card-muted: rgba(255, 255, 255, 0.67);
+  position: relative;
+  display: flex;
+  width: clamp(292px, 31vw, 372px);
+  min-width: clamp(292px, 31vw, 372px);
+  min-height: 218px;
+  flex-direction: column;
+  overflow: hidden;
+  scroll-snap-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  padding: 21px;
+  color: var(--source-card-fg);
+  box-shadow: 0 18px 38px rgba(38, 22, 16, 0.16);
+  transform: translateY(0) scale(1);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  isolation: isolate;
+}
+
+.money-source-card:hover,
+.money-source-card:focus-visible {
+  z-index: 2;
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 28px 58px rgba(38, 22, 16, 0.24);
+  transform: translateY(-7px) scale(1.015);
+}
+
+.money-source-card.is-selected {
+  box-shadow: 0 0 0 3px rgba(74, 43, 32, 0.18), 0 25px 52px rgba(38, 22, 16, 0.22);
+}
+
+.money-source-card::before,
+.money-source-card::after,
+.money-source-card__glow {
+  position: absolute;
+  pointer-events: none;
+  content: '';
+}
+
+.money-source-card::before {
+  z-index: -1;
+  width: 190px;
+  height: 190px;
+  top: -110px;
+  right: -55px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.money-source-card::after {
+  z-index: -1;
+  width: 140px;
+  height: 140px;
+  bottom: -90px;
+  left: -42px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.money-source-card__glow {
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.12), transparent 38%, rgba(255, 255, 255, 0.05));
+}
+
+.money-source-card--aggregate,
+.money-source-card--wallet,
+.money-source-card--kape {
+  background: linear-gradient(145deg, #21110c 0%, #4a2b20 55%, #8c604b 100%);
+}
+
+.money-source-card--capitec {
+  --source-card-fg: #112d46;
+  --source-card-muted: #5a7184;
+  border-color: #d6e1ea;
+  background:
+    linear-gradient(113deg, transparent 0 66%, #e51b2b 66% 72%, #003b70 72% 100%),
+    linear-gradient(145deg, #ffffff 0%, #edf3f7 70%, #dbe8ef 100%);
+  box-shadow: 0 18px 38px rgba(0, 59, 112, 0.16);
+}
+
+.money-source-card--capitec::before {
+  background: rgba(0, 59, 112, 0.08);
+}
+
+.money-source-card--capitec::after {
+  background: rgba(229, 27, 43, 0.08);
+}
+
+.money-source-card--standard-bank {
+  background: linear-gradient(145deg, #0033a0 0%, #0057b8 58%, #13a3e2 100%);
+  box-shadow: 0 18px 38px rgba(0, 51, 160, 0.24);
+}
+
+.money-source-card--fnb {
+  --source-card-fg: #153d42;
+  --source-card-muted: #3f6d70;
+  border-color: #bedfdc;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 138, 32, 0.88) 0 13%, transparent 13.5%),
+    linear-gradient(145deg, #f8f2df 0%, #d9efe9 58%, #86c9c4 100%);
+}
+
+.money-source-card--absa {
+  background: linear-gradient(145deg, #8d1027 0%, #d20a2e 58%, #f04b57 100%);
+  box-shadow: 0 18px 38px rgba(173, 18, 48, 0.24);
+}
+
+.money-source-card--nedbank {
+  background: linear-gradient(145deg, #043c2b 0%, #087443 57%, #5cab63 100%);
+  box-shadow: 0 18px 38px rgba(4, 92, 53, 0.23);
+}
+
+.money-source-card--bank {
+  background: linear-gradient(145deg, #152633 0%, #294e64 58%, #6b92a0 100%);
+}
+
+.money-source-card__top,
+.money-source-card__bottom {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.money-source-card__type {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--source-card-fg);
+  backdrop-filter: blur(8px);
+}
+
+.money-source-card--capitec .money-source-card__type,
+.money-source-card--fnb .money-source-card__type {
+  border-color: rgba(17, 45, 70, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.money-source-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.money-source-brand__image {
+  display: none;
+  width: 126px;
+  height: 38px;
+  flex: 0 0 auto;
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.money-source-brand__fallback {
+  overflow: hidden;
+  max-width: 190px;
+  color: var(--source-card-fg);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.money-source-brand--capitec .money-source-brand__image,
+.money-source-brand--standard-bank .money-source-brand__image,
+.money-source-brand--fnb .money-source-brand__image,
+.money-source-brand--absa .money-source-brand__image,
+.money-source-brand--nedbank .money-source-brand__image {
+  display: block;
+  border-radius: 9px;
+  background-color: rgba(255, 255, 255, 0.94);
+  background-origin: content-box;
+  padding: 6px 9px;
+}
+
+.money-source-brand--capitec .money-source-brand__image {
+  width: 145px;
+  background-color: transparent;
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Capitec_Bank_logo.svg');
+  padding: 0;
+}
+
+.money-source-brand--standard-bank .money-source-brand__image {
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Standard_Bank_SA_logo.svg');
+}
+
+.money-source-brand--fnb .money-source-brand__image {
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/First_National_Bank_Logo.svg');
+}
+
+.money-source-brand--absa .money-source-brand__image {
+  width: 78px;
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Absa_Logo.svg');
+}
+
+.money-source-brand--nedbank .money-source-brand__image {
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Nedbank_logo.svg');
+}
+
+.money-source-brand--capitec .money-source-brand__fallback,
+.money-source-brand--standard-bank .money-source-brand__fallback,
+.money-source-brand--fnb .money-source-brand__fallback,
+.money-source-brand--absa .money-source-brand__fallback,
+.money-source-brand--nedbank .money-source-brand__fallback {
+  display: none;
+}
+
+.money-source-card__balance {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  margin-top: 34px;
+}
+
+.money-source-card__balance span,
+.money-source-card__balance small,
+.money-source-card__bottom span {
+  color: var(--source-card-muted);
+  font-size: 9px;
+}
+
+.money-source-card__balance span {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.money-source-card__balance strong {
+  color: var(--source-card-fg);
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.money-source-card__bottom {
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.money-source-card__bottom > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.money-source-card__bottom strong {
+  overflow: hidden;
+  color: var(--source-card-fg);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.money-source-card__bottom > span {
+  flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.money-source-carousel__dots {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.money-source-carousel__dots button {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #d8c9c0;
+  transition: width 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.money-source-carousel__dots button:hover {
+  background: #9a7565;
+  transform: scale(1.2);
+}
+
+.money-source-carousel__dots button.is-active {
+  width: 34px;
+  background: #4a2b20;
+}
+
+.unified-history-table td:first-child {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.merchant-mark {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  background: #f5eee9;
+  color: #6b4435;
+  box-shadow: 0 5px 13px rgba(54, 34, 25, 0.08);
+}
+
+.merchant-mark > span {
+  width: 31px;
+  height: 31px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.merchant-mark--netflix {
+  border-color: #2d2d2d;
+  background: #090909;
+}
+
+.merchant-mark--netflix > span {
+  width: 25px;
+  height: 25px;
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Netflix_icon.svg');
+}
+
+.merchant-mark--pick-n-pay {
+  border-color: #e2e8f0;
+  background: #fff;
+}
+
+.merchant-mark--pick-n-pay > span {
+  width: 34px;
+  height: 24px;
+  background-image: url('https://commons.wikimedia.org/wiki/Special:Redirect/file/Pick_n_Pay_logo.svg');
+}
+
+.merchant-mark--vodacom {
+  border-color: #e70000;
+  background: #e60000;
+  color: white;
+}
+
+.merchant-mark--salary {
+  border-color: #b8e7c9;
+  background: #e8f8ee;
+  color: #157347;
+}
+
+.merchant-mark--savings {
+  border-color: #c8dcf3;
+  background: #eaf3fd;
+  color: #2369a5;
+}
+
+.merchant-mark--wallet {
+  border-color: #e3d5cd;
+  background: #f3e9e3;
+  color: #6b4435;
+}
+
+.merchant-mark--wallet.is-credit,
+.merchant-mark--generic.is-credit {
+  border-color: #b8e7c9;
+  background: #e8f8ee;
+  color: #157347;
+}
+
+.merchant-mark--generic.is-debit {
+  border-color: #f2c8bb;
+  background: #fff0ea;
+  color: #b34d2e;
+}
+
+@media (max-width: 900px) {
+  .money-source-card {
+    width: min(82vw, 350px);
+    min-width: min(82vw, 350px);
+    min-height: 210px;
+  }
+}
+
+@media (max-width: 640px) {
+  .money-source-carousel__viewport {
+    gap: 12px;
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+
+  .money-source-card {
+    width: 86vw;
+    min-width: 86vw;
+    min-height: 205px;
+    border-radius: 21px;
+    padding: 18px;
+  }
+
+  .money-source-card__balance {
+    margin-top: 28px;
+  }
+
+  .money-source-card__balance strong {
+    font-size: 31px;
+  }
+
+  .money-source-brand__image {
+    max-width: 128px;
+  }
+
+  .history-search {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+  }
+
+  .history-search a {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .money-source-card,
+  .money-source-carousel__viewport,
+  .money-source-carousel__dots button {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

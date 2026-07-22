@@ -2,19 +2,19 @@
 
 This phase uses demo providers, SQL Server, a double-entry ledger, tokenised demo payment methods, an encrypted voucher-code store, and a durable SQL queue. No real bank is contacted and no real money moves.
 
-## 1. Switch to the Phase 3 branch
+## 1. Switch to the active wallet UI branch
 
 ```powershell
 git fetch origin
-git switch agent/kape-phase-3-wallet-platform
-git pull --ff-only origin agent/kape-phase-3-wallet-platform
+git switch agent/kape-phase-4-unified-wallet-ui
+git pull --ff-only origin agent/kape-phase-4-unified-wallet-ui
 git status
 git log -1 --oneline
 ```
 
 ## 2. Stop running applications
 
-Stop the Next.js and API terminals with `Ctrl+C` before applying the migration.
+Stop the Next.js and API terminals with `Ctrl+C` before applying migrations.
 
 ## 3. Install or update EF Core CLI
 
@@ -53,7 +53,7 @@ npm run lint
 npm run build
 ```
 
-## 5. Review the pending migration
+## 5. Review pending migrations
 
 ```powershell
 dotnet ef migrations list `
@@ -61,13 +61,15 @@ dotnet ef migrations list `
   --startup-project backend/Kape.Api/Kape.Api.csproj
 ```
 
-The list must contain:
+The list includes the wallet foundation, catalogue alignment, and:
 
 ```text
-20260721120000_WalletPlatformFoundation
+20260722144500_WalletQueueReadPastCompatibility
 ```
 
-Create a SQL script before changing the database:
+The compatibility migration updates `dbo.sp_DequeueWalletMessage` to combine `READPAST` with `READCOMMITTEDLOCK`. This is required when SQL Server has `READ_COMMITTED_SNAPSHOT` enabled. Without the lock-based hint, the hosted queue worker repeatedly reports SQL error 650.
+
+Create an idempotent SQL script before changing the database:
 
 ```powershell
 dotnet ef migrations script `
@@ -77,11 +79,9 @@ dotnet ef migrations script `
   --output wallet-platform-migration.sql
 ```
 
-Review `wallet-platform-migration.sql`. It creates the wallet-platform tables, constraints, indexes, SQL functions, stored procedures, and queue procedure.
+Review `wallet-platform-migration.sql` before applying it.
 
 ## 6. Back up the local development database
-
-This migration adds tables and SQL objects but always take a backup before applying schema changes to a database containing useful development data.
 
 The default database from `backend/Kape.Api/appsettings.json` is:
 
@@ -89,7 +89,9 @@ The default database from `backend/Kape.Api/appsettings.json` is:
 KapeApp
 ```
 
-## 7. Apply the migration
+Take a backup when the database contains useful development data.
+
+## 7. Apply migrations
 
 ```powershell
 dotnet ef database update `
@@ -97,7 +99,7 @@ dotnet ef database update `
   --startup-project backend/Kape.Api/Kape.Api.csproj
 ```
 
-Verify the applied migration:
+Verify:
 
 ```powershell
 dotnet ef migrations list `
@@ -105,9 +107,11 @@ dotnet ef migrations list `
   --startup-project backend/Kape.Api/Kape.Api.csproj
 ```
 
+The queue compatibility migration must no longer be marked pending.
+
 ## 8. Configure local development values
 
-Do not commit secrets. Set them in the API terminal or use .NET user secrets.
+Do not commit secrets. Set values in the API terminal or use .NET user secrets.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
@@ -129,17 +133,31 @@ dotnet run --project backend/Kape.Api --no-launch-profile
 Frontend terminal:
 
 ```powershell
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
 npm run dev
 ```
 
 Open:
 
 ```text
-Frontend: http://localhost:3000
+Overview: http://localhost:3000
+Wallet:   http://localhost:3000/wallet
+Banks:    http://localhost:3000/linked-banks
 Swagger:  http://localhost:5000/swagger
 ```
 
-## 10. Swagger verification order
+The Overview should show the integrated right rail with the Kape wallet card, linked-account cards, quick actions, money snapshot, and unified recent activity.
+
+## 10. Expected queue-worker behaviour
+
+After applying `WalletQueueReadPastCompatibility` and restarting the API:
+
+- `sp_DequeueWalletMessage` may execute repeatedly while the queue is empty.
+- Empty dequeue results are normal.
+- SQL error 650 must not appear.
+- `Wallet platform queue worker loop failed` must not repeat.
+
+## 11. Swagger verification order
 
 ### Authentication
 
@@ -164,7 +182,7 @@ Create a session:
 {
   "providerId": "demo",
   "institutionId": "capitec",
-  "returnUrl": "http://localhost:3000/my-banks"
+  "returnUrl": "http://localhost:3000/linked-banks"
 }
 ```
 
@@ -196,7 +214,7 @@ Create setup:
 ```json
 {
   "providerId": "demo",
-  "returnUrl": "http://localhost:3000/my-banks"
+  "returnUrl": "http://localhost:3000/wallet"
 }
 ```
 
@@ -217,8 +235,6 @@ Confirm using fictional values only:
 Kape hashes the demo processor token and stores only a token reference and masked metadata. Never enter a real card number or CVV.
 
 ### Wallet top-up
-
-Use the returned payment-method ID:
 
 Preview:
 
@@ -305,7 +321,7 @@ Then test:
 
 Use a unique idempotency key for each intended transfer.
 
-## 11. SQL Server verification
+## 12. SQL Server verification
 
 Run these queries in SQL Server Management Studio:
 
@@ -314,27 +330,7 @@ SELECT MigrationId
 FROM dbo.__EFMigrationsHistory
 ORDER BY MigrationId;
 
-SELECT name, type_desc
-FROM sys.indexes
-WHERE object_id IN (
-    OBJECT_ID('dbo.WalletTransactions'),
-    OBJECT_ID('dbo.LedgerEntries'),
-    OBJECT_ID('dbo.QueueMessages'),
-    OBJECT_ID('dbo.LinkedBankTransactions'))
-  AND name IS NOT NULL
-ORDER BY object_id, name;
-
-SELECT name, type_desc
-FROM sys.objects
-WHERE name IN (
-    'fn_WalletBalance',
-    'fn_NormaliseSouthAfricanMobile',
-    'sp_GetWalletStatement',
-    'sp_GetLinkedAccountTransactions',
-    'sp_ReconcileWallet',
-    'sp_DequeueWalletMessage',
-    'sp_ExpirePaymentRequests')
-ORDER BY name;
+SELECT OBJECT_DEFINITION(OBJECT_ID('dbo.sp_DequeueWalletMessage')) AS DequeueProcedure;
 
 SELECT TOP (20)
     QueueName,
@@ -349,7 +345,9 @@ FROM dbo.QueueMessages
 ORDER BY CreatedAt DESC;
 ```
 
-## 12. Expected safety properties
+The procedure definition must contain both `READPAST` and `READCOMMITTEDLOCK`.
+
+## 13. Expected safety properties
 
 - Every protected query is scoped to the authenticated user.
 - Payment methods store token references and masked metadata, not full card numbers or CVVs.
@@ -357,6 +355,6 @@ ORDER BY CreatedAt DESC;
 - Ledger journals create equal debit and credit entries.
 - Payment and order idempotency keys prevent duplicate processing.
 - Webhook events are unique per provider and external event ID.
-- The queue uses an atomic stored procedure with `UPDLOCK`, `READPAST`, and row locking.
+- The queue uses an atomic procedure with `UPDLOCK`, `READPAST`, `READCOMMITTEDLOCK`, and row locking.
 - Voucher codes are encrypted at rest through Data Protection.
 - All current providers are demo adapters; real banking, processor, and voucher providers require separate credentials, compliance, and sandbox certification.
