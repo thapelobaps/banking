@@ -39,18 +39,7 @@ jobs:
         run: npm ci
 
       - name: Type-check
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run typecheck 2>&1 | tee frontend-typecheck.log
-
-      - name: Upload type-check output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-typecheck-output
-          path: frontend-typecheck.log
-          if-no-files-found: warn
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint
