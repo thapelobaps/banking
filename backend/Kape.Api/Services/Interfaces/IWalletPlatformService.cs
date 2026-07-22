@@ -56,6 +56,7 @@ public interface IWalletPlatformService
     Task<ValidatePrepaidRecipientResponseDto> ValidatePrepaidRecipientAsync(ValidatePrepaidRecipientRequestDto request, CancellationToken cancellationToken);
     Task<WalletOperationPreviewResponseDto> QuotePrepaidAsync(Guid userId, PrepaidQuoteRequestDto request, CancellationToken cancellationToken);
     Task<PrepaidOrderResponseDto> CreatePrepaidOrderAsync(Guid userId, CreatePrepaidOrderRequestDto request, CancellationToken cancellationToken);
+    Task<PageResponseDto<PrepaidOrderResponseDto>> GetPrepaidOrdersAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);
     Task<PrepaidOrderResponseDto> GetPrepaidOrderAsync(Guid userId, Guid orderId, CancellationToken cancellationToken);
 
     Task<ResolvedKapeUserResponseDto> ResolveKapeUserAsync(Guid currentUserId, ResolveKapeUserRequestDto request, CancellationToken cancellationToken);
