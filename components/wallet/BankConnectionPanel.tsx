@@ -25,6 +25,10 @@ const institutions = [
   { id: 'nedbank', name: 'Nedbank' },
 ];
 
+const isPlaceholderConnection = (connection: BankConnection) =>
+  connection.status === 'pending' &&
+  connection.institutionName.trim().toLowerCase() === 'pending bank selection';
+
 export default function BankConnectionPanel({ connections, providerId }: BankConnectionPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -33,6 +37,7 @@ export default function BankConnectionPanel({ connections, providerId }: BankCon
   const [isError, setIsError] = useState(false);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const usesStitch = providerId === 'stitch';
+  const visibleConnections = connections.filter((connection) => !isPlaceholderConnection(connection));
 
   const connect = () => {
     setActiveConnectionId('new');
@@ -123,8 +128,8 @@ export default function BankConnectionPanel({ connections, providerId }: BankCon
       </div>
 
       <div className="bank-connection-list">
-        {connections.length ? (
-          connections.map((connection) => (
+        {visibleConnections.length ? (
+          visibleConnections.map((connection) => (
             <article key={connection.id} className="bank-connection-row">
               <div className="bank-connection-row__icon">
                 <Landmark size={19} />
