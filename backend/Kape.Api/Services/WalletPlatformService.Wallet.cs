@@ -166,7 +166,6 @@ public sealed partial class WalletPlatformService
         {
             WalletId = wallet.Id,
             UserId = userId,
-            PaymentMethodId = request.PaymentMethodId,
             Type = "withdrawal",
             Amount = request.Amount,
             FeeAmount = fee,
@@ -391,13 +390,22 @@ public sealed partial class WalletPlatformService
             throw Validation("fundingSource", "Choose a tokenised card or linked bank account.");
         }
 
+        if (paymentMethodId is not null && linkedBankAccountId is not null)
+        {
+            throw Validation("fundingSource", "Choose only one funding source.");
+        }
+
         if (paymentMethodId is not null)
         {
             var paymentMethod = await _repository.GetAsync<PaymentMethod>(
                 item => item.Id == paymentMethodId && item.UserId == userId && item.Status == "active",
                 cancellationToken: cancellationToken)
                 ?? throw new NotFoundApiException("The tokenised payment method could not be found.");
-            _ = paymentMethod;
+
+            if (PaymentMethodRules.IsExpired(paymentMethod.ExpiryMonth, paymentMethod.ExpiryYear, DateTimeOffset.UtcNow))
+            {
+                throw new ConflictApiException("The tokenised payment method has expired. Add another card to continue.");
+            }
         }
 
         if (linkedBankAccountId is not null)
@@ -406,12 +414,24 @@ public sealed partial class WalletPlatformService
         }
     }
 
-    private Task EnsureWithdrawalDestinationAsync(
+    private async Task EnsureWithdrawalDestinationAsync(
         Guid userId,
         Guid? paymentMethodId,
         Guid? linkedBankAccountId,
-        CancellationToken cancellationToken) =>
-        EnsureFundingSourceAsync(userId, paymentMethodId, linkedBankAccountId, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        if (paymentMethodId is not null)
+        {
+            throw Validation("paymentMethodId", "Withdrawals must be paid into a linked bank account, not a tokenised card.");
+        }
+
+        if (linkedBankAccountId is null)
+        {
+            throw Validation("linkedBankAccountId", "Choose a linked bank account for the withdrawal.");
+        }
+
+        await GetOwnedLinkedAccountAsync(userId, linkedBankAccountId.Value, cancellationToken);
+    }
 
     private Task<WalletTransaction?> FindWalletTransactionByIdempotencyKeyAsync(
         Guid userId,
