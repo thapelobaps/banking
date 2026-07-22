@@ -120,7 +120,7 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(StitchIntegrationOptions.SectionName))
             .Validate(
                 options => !options.Enabled || options.HasRequiredCredentials,
-                "Stitch is enabled but ClientId, ClientSecret, or an absolute RedirectUri is missing.")
+                "Stitch is enabled but ClientId, ClientSecret, or an absolute HTTPS RedirectUri is missing.")
             .Validate(
                 options => !options.Enabled || options.HasRequiredUserScopes,
                 "Stitch user scopes must include openid, offline_access, accounts, balances, and transactions.")
@@ -155,8 +155,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVoucherCodeProtector, DataProtectionVoucherCodeProtector>();
         services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
 
+        services.AddSingleton<IStitchAuthorizationRequestStore, ProtectedMemoryStitchAuthorizationRequestStore>();
+        services.AddSingleton<IStitchConnectionSecretStore, ProtectedMemoryStitchConnectionSecretStore>();
+        services.AddSingleton<IStitchOAuthClient, StitchOAuthClient>();
+        services.AddSingleton<IStitchFinancialDataClient, StitchFinancialDataClient>();
+
         services.AddSingleton<IBankingProvider, SouthAfricanDemoBankingProvider>();
         services.AddSingleton<DemoBankAggregationProvider>();
+        services.AddSingleton<StitchBankAggregationProvider>();
         services.AddSingleton<IBankAggregationProvider>(serviceProvider =>
         {
             var configuredProvider = serviceProvider
@@ -169,10 +175,7 @@ public static class ServiceCollectionExtensions
             return configuredProvider switch
             {
                 "demo" or "demo-bank-aggregator" => serviceProvider.GetRequiredService<DemoBankAggregationProvider>(),
-                "stitch" => throw new InvalidOperationException(
-                    "The Stitch provider has been selected, but the live Stitch adapter has not been registered yet. " +
-                    "Implement IBankAggregationProvider with IStitchOAuthClient, IStitchConnectionSecretStore, and " +
-                    "IStitchFinancialDataClient, then replace this switch branch."),
+                "stitch" => ResolveStitchProvider(serviceProvider),
                 _ => throw new InvalidOperationException($"Bank aggregation provider '{configuredProvider}' is not supported."),
             };
         });
@@ -180,6 +183,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDigitalProductProvider, DemoDigitalProductProvider>();
 
         services.AddHostedService<WalletQueueWorker>();
+    }
+
+    private static StitchBankAggregationProvider ResolveStitchProvider(IServiceProvider serviceProvider)
+    {
+        var options = serviceProvider
+            .GetRequiredService<IOptions<StitchIntegrationOptions>>()
+            .Value;
+        if (!options.Enabled)
+        {
+            throw new InvalidOperationException(
+                "The Stitch provider is selected but Providers:Stitch:Enabled is false.");
+        }
+
+        return serviceProvider.GetRequiredService<StitchBankAggregationProvider>();
     }
 
     private static void AddCors(
