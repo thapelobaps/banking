@@ -1,15 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Landmark,
-  Search,
-  ShieldCheck,
-  WalletCards,
-} from 'lucide-react';
+import { Search, ShieldCheck } from 'lucide-react';
 
 import HeaderBox from '@/components/HeaderBox';
+import MerchantMark from '@/components/wallet/MerchantMark';
+import MoneySourceCarousel, { type MoneySourceCarouselItem } from '@/components/wallet/MoneySourceCarousel';
 import {
   getLinkedAccountTransactions,
   getLinkedAccounts,
@@ -127,23 +122,6 @@ const TransactionHistory = async ({ searchParams }: TransactionHistoryProps) => 
   const totalPages = Math.max(1, Math.ceil(filteredActivity.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const pageItems = filteredActivity.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const selectedLinkedAccount = linkedAccounts.find((account) => account.id === selectedSource);
-
-  const selectedName = selectedSource === 'wallet'
-    ? 'Kape Wallet'
-    : selectedLinkedAccount
-      ? selectedLinkedAccount.institutionName
-      : 'All money activity';
-  const selectedDetail = selectedSource === 'wallet'
-    ? 'SQL-backed double-entry wallet'
-    : selectedLinkedAccount
-      ? `${selectedLinkedAccount.accountName} •••• ${selectedLinkedAccount.accountNumberMask}`
-      : 'Wallet and all linked bank accounts';
-  const selectedAvailable = selectedSource === 'wallet'
-    ? wallet.availableBalance
-    : selectedLinkedAccount
-      ? selectedLinkedAccount.availableBalance
-      : wallet.availableBalance + linkedAccounts.reduce((sum, account) => sum + account.availableBalance, 0);
 
   const createHistoryHref = (source: string, page = 1) => {
     const params = new URLSearchParams();
@@ -152,6 +130,45 @@ const TransactionHistory = async ({ searchParams }: TransactionHistoryProps) => 
     if (page > 1) params.set('page', String(page));
     return `/transaction-history?${params.toString()}`;
   };
+
+  const linkedAvailableTotal = linkedAccounts.reduce((sum, account) => sum + account.availableBalance, 0);
+  const linkedCurrentTotal = linkedAccounts.reduce((sum, account) => sum + account.currentBalance, 0);
+  const totalActivityCount = walletActivity.length + linkedActivity.length;
+
+  const sourceCards: MoneySourceCarouselItem[] = [
+    {
+      id: 'all',
+      href: createHistoryHref('all'),
+      kind: 'aggregate',
+      institution: 'Kape',
+      accountName: 'All money activity',
+      availableBalance: wallet.availableBalance + linkedAvailableTotal,
+      currentBalance: wallet.balance + linkedCurrentTotal,
+      entryCount: totalActivityCount,
+    },
+    {
+      id: 'wallet',
+      href: createHistoryHref('wallet'),
+      kind: 'wallet',
+      institution: 'Kape',
+      accountName: 'Digital Wallet',
+      mask: 'WALLET',
+      availableBalance: wallet.availableBalance,
+      currentBalance: wallet.balance,
+      entryCount: walletActivity.length,
+    },
+    ...linkedResults.map(({ account, transactions }) => ({
+      id: account.id,
+      href: createHistoryHref(account.id),
+      kind: 'bank' as const,
+      institution: account.institutionName,
+      accountName: account.accountName,
+      mask: account.accountNumberMask,
+      availableBalance: account.availableBalance,
+      currentBalance: account.currentBalance,
+      entryCount: transactions.length,
+    })),
+  ];
 
   return (
     <section className="kape-page unified-history-page">
@@ -163,38 +180,7 @@ const TransactionHistory = async ({ searchParams }: TransactionHistoryProps) => 
         <span className="kape-count-pill">{filteredActivity.length} transaction{filteredActivity.length === 1 ? '' : 's'}</span>
       </header>
 
-      <section className="history-summary-card">
-        <div>
-          <span>{selectedSource === 'wallet' ? <WalletCards size={19} /> : <Landmark size={19} />}</span>
-          <div>
-            <small>Selected source</small>
-            <strong>{selectedName}</strong>
-            <p>{selectedDetail}</p>
-          </div>
-        </div>
-        <div>
-          <small>Available balance</small>
-          <strong>{formatAmount(selectedAvailable)}</strong>
-          <p>{selectedSource === 'all' ? 'Consolidated visible balances' : 'Source-reported available money'}</p>
-        </div>
-      </section>
-
-      <nav className="history-source-tabs" aria-label="Transaction source">
-        <Link href={createHistoryHref('all')} className={selectedSource === 'all' ? 'is-active' : ''}>
-          <strong>All activity</strong>
-          <span>{walletActivity.length + linkedActivity.length} entries</span>
-        </Link>
-        <Link href={createHistoryHref('wallet')} className={selectedSource === 'wallet' ? 'is-active' : ''}>
-          <strong>Kape Wallet</strong>
-          <span>{walletActivity.length} ledger entries</span>
-        </Link>
-        {linkedAccounts.map((account) => (
-          <Link key={account.id} href={createHistoryHref(account.id)} className={selectedSource === account.id ? 'is-active' : ''}>
-            <strong>{account.institutionName}</strong>
-            <span>•••• {account.accountNumberMask}</span>
-          </Link>
-        ))}
-      </nav>
+      <MoneySourceCarousel items={sourceCards} selectedId={selectedSource} />
 
       <form className="history-search" action="/transaction-history" method="get">
         <input type="hidden" name="source" value={selectedSource} />
@@ -232,9 +218,12 @@ const TransactionHistory = async ({ searchParams }: TransactionHistoryProps) => 
                   return (
                     <tr key={activity.id}>
                       <td>
-                        <div className={`history-transaction-icon ${isCredit ? 'is-credit' : 'is-debit'}`}>
-                          {isCredit ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
-                        </div>
+                        <MerchantMark
+                          title={activity.title}
+                          category={activity.category}
+                          sourceName={activity.sourceName}
+                          direction={activity.direction}
+                        />
                         <div>
                           <strong>{activity.title}</strong>
                           <span>{activity.category}</span>
