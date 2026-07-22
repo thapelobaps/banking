@@ -26,7 +26,7 @@ const resolveBrand = (institution: string, kind: IssuerCardFaceProps['kind']): C
 
 const palette: Record<CardBrand, { from: string; to: string; foreground: string; muted: string; accent: string }> = {
   kape: { from: '#21110c', to: '#7b4b37', foreground: '#ffffff', muted: '#dbc8bd', accent: '#d6a875' },
-  capitec: { from: '#f8fbfd', to: '#dce8ef', foreground: '#123653', muted: '#547087', accent: '#e51b2b' },
+  capitec: { from: '#111111', to: '#252525', foreground: '#ffffff', muted: '#b8b8b8', accent: '#2d78ff' },
   'standard-bank': { from: '#0033a0', to: '#1597d4', foreground: '#ffffff', muted: '#d7ebff', accent: '#70d1ff' },
   fnb: { from: '#f4ecd9', to: '#8fd0c8', foreground: '#173e42', muted: '#4b7172', accent: '#ef7c28' },
   absa: { from: '#8b0c24', to: '#ed3852', foreground: '#ffffff', muted: '#ffd5db', accent: '#ff8492' },
@@ -34,17 +34,93 @@ const palette: Record<CardBrand, { from: string; to: string; foreground: string;
   generic: { from: '#182a37', to: '#668b9c', foreground: '#ffffff', muted: '#d9e6ec', accent: '#9fd0e1' },
 };
 
-const BrandArtwork = ({ brand, foreground, accent }: { brand: CardBrand; foreground: string; accent: string }) => {
-  if (brand === 'capitec') {
-    return (
-      <>
-        <path d="M250 -8H350V222H314L258 148Z" fill="#003b70" opacity="0.96" />
-        <path d="M287 -8H319L245 214H215Z" fill="#e51b2b" opacity="0.96" />
-        <path d="M0 176C83 143 145 154 214 191V214H0Z" fill="#ffffff" opacity="0.42" />
-      </>
-    );
-  }
+const CapitecSymbol = () => (
+  <g transform="translate(24 20)" fill="#ffffff">
+    <path d="M18 3h35c10 0 18 8 18 18v10H49V21H27c-5 0-9 4-9 9v9H0V21C0 11 8 3 18 3Z" />
+    <path d="M18 34h22v10c0 5 4 9 9 9h22v18H36c-10 0-18-8-18-18V34Z" />
+  </g>
+);
 
+const MastercardMark = ({ compact = false }: { compact?: boolean }) => {
+  const radius = compact ? 12 : 22;
+  const offset = compact ? 16 : 29;
+  const x = compact ? 274 : 267;
+  const y = compact ? 172 : 35;
+
+  return (
+    <g>
+      <circle cx={x} cy={y} r={radius} fill="#eb001b" />
+      <circle cx={x + offset} cy={y} r={radius} fill="#f79e1b" />
+      <path
+        d={compact
+          ? `M${x + 8} ${y - 9}a12 12 0 0 1 0 18 12 12 0 0 1 0-18Z`
+          : `M${x + 14} ${y - 17}a22 22 0 0 1 0 34 22 22 0 0 1 0-34Z`}
+        fill="#ff5f00"
+      />
+    </g>
+  );
+};
+
+const CapitecAnniversaryCard = ({ mask, uid }: { mask?: string; uid: string }) => {
+  const metalId = `capitec-metal-${uid}`;
+  const grainId = `capitec-grain-${uid}`;
+  const edgeId = `capitec-edge-${uid}`;
+  const lastFour = mask?.slice(-4) || '0000';
+
+  return (
+    <svg viewBox="0 0 340 214" role="img" aria-label="Capitec Personal debit card">
+      <defs>
+        <linearGradient id={metalId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#272727" />
+          <stop offset="0.42" stopColor="#111111" />
+          <stop offset="1" stopColor="#202020" />
+        </linearGradient>
+        <linearGradient id={edgeId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#4d8cff" />
+          <stop offset="0.5" stopColor="#1f6fff" />
+          <stop offset="1" stopColor="#0d48b6" />
+        </linearGradient>
+        <filter id={grainId} x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.7 0.035" numOctaves="2" seed="8" result="noise" />
+          <feColorMatrix
+            in="noise"
+            type="matrix"
+            values="0 0 0 0 0.7 0 0 0 0 0.7 0 0 0 0 0.7 0 0 0 .18 0"
+            result="grain"
+          />
+          <feBlend in="SourceGraphic" in2="grain" mode="soft-light" />
+        </filter>
+      </defs>
+
+      <rect x="1.5" y="1.5" width="337" height="211" rx="24" fill={`url(#${edgeId})`} />
+      <rect x="4" y="4" width="332" height="206" rx="21" fill={`url(#${metalId})`} filter={`url(#${grainId})`} />
+      <path d="M7 8H333" stroke="#7cb0ff" strokeWidth="1.4" opacity="0.7" />
+
+      <CapitecSymbol />
+      <text x="102" y="47" fill="#ffffff" fontSize="28" fontWeight="500" letterSpacing="1.4">
+        CAPITEC
+      </text>
+      <text x="25" y="75" fill="#ffffff" fontSize="15" fontWeight="400">
+        Personal <tspan fontWeight="800">debit</tspan>
+      </text>
+
+      <MastercardMark />
+
+      <g opacity="0.16" transform="translate(183 84)">
+        <text x="12" y="82" fill="#d7d7d7" fontSize="92" fontWeight="800" letterSpacing="-8">25</text>
+        <path d="M13 89H42L48 79L55 97L63 69L72 104L82 75L92 95H111" fill="none" stroke="#dedede" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M104 81c0-10 13-15 20-7 7-8 20-3 20 7 0 12-20 25-20 25s-20-13-20-25Z" fill="#dedede" />
+        <text x="99" y="126" fill="#cfcfcf" fontSize="19" fontWeight="700">years</text>
+      </g>
+
+      <text x="24" y="190" fill="#ffffff" fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fontSize="23" fontWeight="700" letterSpacing="1.1">
+        ••{lastFour}
+      </text>
+    </svg>
+  );
+};
+
+const BrandArtwork = ({ brand, foreground, accent }: { brand: CardBrand; foreground: string; accent: string }) => {
   if (brand === 'standard-bank') {
     return (
       <>
@@ -142,6 +218,10 @@ export default function IssuerCardFace({
   const displayInstitution = kind === 'aggregate' ? 'KAPE' : institution.toUpperCase();
   const displayAccount = kind === 'aggregate' ? 'UNIFIED MONEY' : accountName.toUpperCase();
   const displayMask = mask ? `••••  ••••  ••••  ${mask}` : kind === 'wallet' ? '••••  ••••  KAPE  WALLET' : 'ALL ACCOUNTS';
+
+  if (brand === 'capitec') {
+    return <CapitecAnniversaryCard mask={mask} uid={uid} />;
+  }
 
   return (
     <svg viewBox="0 0 340 214" role="img" aria-label={`${institution} ${accountName} payment card`}>
