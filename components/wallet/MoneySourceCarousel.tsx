@@ -23,6 +23,13 @@ type MoneySourceCarouselProps = {
   selectedId: string;
 };
 
+type IssuerCardArtwork = {
+  url: string;
+  alt: string;
+  fit: 'cover' | 'contain';
+  background: string;
+};
+
 const brandKey = (institution: string) => {
   const value = institution.toLowerCase();
   if (value.includes('capitec')) return 'capitec';
@@ -32,6 +39,33 @@ const brandKey = (institution: string) => {
   if (value.includes('nedbank')) return 'nedbank';
   if (value.includes('kape')) return 'kape';
   return 'bank';
+};
+
+const resolveIssuerCardArtwork = (item: MoneySourceCarouselItem): IssuerCardArtwork | null => {
+  if (item.kind !== 'bank') return null;
+
+  const institution = item.institution.toLowerCase();
+  const account = item.accountName.toLowerCase();
+
+  if (institution.includes('capitec') && (account.includes('global one') || account.includes('main'))) {
+    return {
+      url: 'https://www.capitecbank.co.za/globalassets/approved-images/transact/onecard---ad-card.jpg',
+      alt: 'Official Capitec Global One physical card artwork',
+      fit: 'contain',
+      background: '#f2f5f7',
+    };
+  }
+
+  if (institution.includes('standard') && account.includes('mymo')) {
+    return {
+      url: 'https://www.standardbank.co.za/static_file/SBG/Assets/Img/SA/BankCards/MyMo-Gold_337x213.png',
+      alt: 'Official Standard Bank MyMo Gold physical card artwork',
+      fit: 'contain',
+      background: '#f3e1a0',
+    };
+  }
+
+  return null;
 };
 
 const SourceIcon = ({ kind }: { kind: MoneySourceCarouselItem['kind'] }) => {
@@ -91,6 +125,7 @@ export default function MoneySourceCarousel({ items, selectedId }: MoneySourceCa
       <div ref={viewportRef} className="money-source-carousel__viewport" onScroll={updateActiveCard}>
         {stableItems.map((item, index) => {
           const bankBrand = brandKey(item.institution);
+          const issuerArtwork = resolveIssuerCardArtwork(item);
           const isSelected = item.id === selectedId;
 
           return (
@@ -100,37 +135,65 @@ export default function MoneySourceCarousel({ items, selectedId }: MoneySourceCa
               ref={(node) => {
                 cardRefs.current[index] = node;
               }}
-              className={`money-source-card money-source-card--${item.kind} money-source-card--${bankBrand}${isSelected ? ' is-selected' : ''}`}
+              className={`money-source-card money-source-card--${item.kind} money-source-card--${bankBrand}${issuerArtwork ? ' has-issuer-artwork' : ''}${isSelected ? ' is-selected' : ''}`}
               aria-current={isSelected ? 'page' : undefined}
               onFocus={() => scrollToCard(index)}
             >
-              <span className="money-source-card__glow" aria-hidden="true" />
+              {issuerArtwork ? (
+                <>
+                  <span
+                    className="money-source-card__issuer-artwork"
+                    role="img"
+                    aria-label={issuerArtwork.alt}
+                    style={{
+                      backgroundColor: issuerArtwork.background,
+                      backgroundImage: `url("${issuerArtwork.url}")`,
+                      backgroundSize: issuerArtwork.fit,
+                    }}
+                  />
 
-              <div className="money-source-card__top">
-                <div className={`money-source-brand money-source-brand--${bankBrand}`} aria-label={`${item.institution} logo`}>
-                  <span className="money-source-brand__image" aria-hidden="true" />
-                  <span className="money-source-brand__fallback">{item.institution}</span>
-                </div>
-                <span className="money-source-card__type"><SourceIcon kind={item.kind} /></span>
-              </div>
+                  <div className="money-source-card__issuer-meta">
+                    <div>
+                      <strong>{item.institution}</strong>
+                      <span>{item.accountName} · {item.entryCount} transaction{item.entryCount === 1 ? '' : 's'}</span>
+                    </div>
+                    <div>
+                      <strong>{formatAmount(item.availableBalance)}</strong>
+                      <span>{item.mask ? `•••• ${item.mask}` : 'Card source'}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="money-source-card__glow" aria-hidden="true" />
 
-              <div className="money-source-card__balance">
-                <span>Available balance</span>
-                <strong>{formatAmount(item.availableBalance)}</strong>
-                <small>
-                  {item.currentBalance == null
-                    ? `${item.entryCount} entr${item.entryCount === 1 ? 'y' : 'ies'}`
-                    : `Current ${formatAmount(item.currentBalance)}`}
-                </small>
-              </div>
+                  <div className="money-source-card__top">
+                    <div className={`money-source-brand money-source-brand--${bankBrand}`} aria-label={`${item.institution} logo`}>
+                      <span className="money-source-brand__image" aria-hidden="true" />
+                      <span className="money-source-brand__fallback">{item.institution}</span>
+                    </div>
+                    <span className="money-source-card__type"><SourceIcon kind={item.kind} /></span>
+                  </div>
 
-              <div className="money-source-card__bottom">
-                <div>
-                  <strong>{item.accountName}</strong>
-                  <span>{item.entryCount} transaction{item.entryCount === 1 ? '' : 's'}</span>
-                </div>
-                <span>{item.mask ? `•••• ${item.mask}` : 'UNIFIED'}</span>
-              </div>
+                  <div className="money-source-card__balance">
+                    <span>Available balance</span>
+                    <strong>{formatAmount(item.availableBalance)}</strong>
+                    <small>
+                      {item.currentBalance == null
+                        ? `${item.entryCount} entr${item.entryCount === 1 ? 'y' : 'ies'}`
+                        : `Current ${formatAmount(item.currentBalance)}`}
+                    </small>
+                  </div>
+
+                  <div className="money-source-card__bottom">
+                    <div>
+                      <strong>{item.accountName}</strong>
+                      <span>{item.entryCount} transaction{item.entryCount === 1 ? '' : 's'}</span>
+                    </div>
+                    <span>{item.mask ? `•••• ${item.mask}` : 'UNIFIED'}</span>
+                  </div>
+                </>
+              )}
             </Link>
           );
         })}
