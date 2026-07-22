@@ -21,6 +21,8 @@ public sealed class WalletQueueReadPastCompatibility : Migration
             BEGIN
                 SET NOCOUNT ON;
                 SET XACT_ABORT ON;
+                SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
                 BEGIN TRANSACTION;
 
                 ;WITH NextMessage AS (
@@ -30,7 +32,8 @@ public sealed class WalletQueueReadPastCompatibility : Migration
                         READPAST,
                         READCOMMITTEDLOCK,
                         ROWLOCK,
-                        INDEX(IX_QueueMessages_Dequeue))
+                        INDEX(IX_QueueMessages_Dequeue)
+                    )
                     WHERE QueueName = @QueueName
                       AND Status = 'pending'
                       AND AvailableAt <= SYSUTCDATETIME()
