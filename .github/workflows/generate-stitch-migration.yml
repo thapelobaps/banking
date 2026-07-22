@@ -1,0 +1,52 @@
+name: Generate Stitch persistence migration
+
+on:
+  push:
+    branches:
+      - agent/kape-stitch-persistent-secrets
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: ${{ !contains(github.event.head_commit.message, '[generated-stitch-migration]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/kape-stitch-persistent-secrets
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install EF tool
+        run: dotnet tool install --global dotnet-ef --version 10.0.9
+
+      - name: Restore backend
+        run: dotnet restore backend/Kape.Api/Kape.Api.csproj
+
+      - name: Generate migration and snapshot
+        run: >-
+          dotnet ef migrations add StitchPersistentSecretStorage
+          --project backend/Kape.Api/Kape.Api.csproj
+          --startup-project backend/Kape.Api/Kape.Api.csproj
+          --output-dir Migrations
+        env:
+          Jwt__SigningKey: migration-generation-only-signing-key-with-more-than-32-characters
+          ConnectionStrings__SqlServer: Server=localhost;Database=KapeMigrationMetadata;User Id=sa;Password=MigrationMetadata123!;TrustServerCertificate=True
+          Providers__Stitch__Enabled: "false"
+
+      - name: Commit generated migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/Kape.Api/Migrations
+          git commit -m "Generate Stitch persistence migration [generated-stitch-migration]"
+          git push origin HEAD:agent/kape-stitch-persistent-secrets
