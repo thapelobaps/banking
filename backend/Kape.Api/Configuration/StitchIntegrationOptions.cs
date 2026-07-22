@@ -16,6 +16,7 @@ public sealed class StitchIntegrationOptions
     public string ClientSecret { get; set; } = string.Empty;
     public string RedirectUri { get; set; } = string.Empty;
     public string WebhookSecret { get; set; } = string.Empty;
+    public string StorageEncryptionKey { get; set; } = string.Empty;
     public string AuthorizationEndpoint { get; set; } = "https://secure.stitch.money/connect/authorize";
     public string TokenEndpoint { get; set; } = "https://secure.stitch.money/connect/token";
     public string GraphQlEndpoint { get; set; } = "https://api.stitch.money/graphql";
@@ -44,6 +45,26 @@ public sealed class StitchIntegrationOptions
             }
 
             return string.Equals(redirectUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public bool HasValidStorageEncryptionKey
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(StorageEncryptionKey))
+            {
+                return false;
+            }
+
+            try
+            {
+                return Convert.FromBase64String(StorageEncryptionKey.Trim()).Length == 32;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
     }
 
