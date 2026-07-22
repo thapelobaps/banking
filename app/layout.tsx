@@ -8,7 +8,7 @@ import './kape-wallet-ui.css';
 import './kape-overview-ui.css';
 import './kape-integrated-money-pages.css';
 import './kape-source-cards.css';
-import './kape-issuer-card-art.css';
+import './kape-svg-card-faces.css';
 import './kape-responsive-fix.css';
 import './kape-desktop-rail.css';
 import './kape-unified-rail.css';
