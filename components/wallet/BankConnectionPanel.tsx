@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Landmark, Link2, Loader2, RefreshCw, Unlink } from 'lucide-react';
 
+import { connectBank } from '@/lib/actions/bank-connection.actions';
 import {
-  connectDemoBank,
   disconnectBankConnection,
   syncBankConnection,
 } from '@/lib/actions/wallet.actions';
@@ -14,6 +14,7 @@ import type { BankConnection } from '@/types/wallet';
 
 type BankConnectionPanelProps = {
   connections: BankConnection[];
+  providerId: 'demo' | 'stitch';
 };
 
 const institutions = [
@@ -24,18 +25,19 @@ const institutions = [
   { id: 'nedbank', name: 'Nedbank' },
 ];
 
-export default function BankConnectionPanel({ connections }: BankConnectionPanelProps) {
+export default function BankConnectionPanel({ connections, providerId }: BankConnectionPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [institutionId, setInstitutionId] = useState('capitec');
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
+  const usesStitch = providerId === 'stitch';
 
   const connect = () => {
     setActiveConnectionId('new');
     startTransition(async () => {
-      const result = await connectDemoBank(institutionId);
+      const result = await connectBank(institutionId);
       if (!result.ok) {
         setIsError(true);
         setMessage(result.error);
@@ -43,8 +45,13 @@ export default function BankConnectionPanel({ connections }: BankConnectionPanel
         return;
       }
 
+      if (result.data.mode === 'redirect') {
+        window.location.assign(result.data.linkUrl);
+        return;
+      }
+
       setIsError(false);
-      setMessage(`${result.data.institutionName} connected and synchronised.`);
+      setMessage(`${result.data.connection.institutionName} connected and synchronised.`);
       setActiveConnectionId(null);
       router.refresh();
     });
@@ -93,7 +100,11 @@ export default function BankConnectionPanel({ connections }: BankConnectionPanel
       <div className="wallet-panel__heading">
         <span className="wallet-eyebrow">Consent-based access</span>
         <h2>Connect another bank</h2>
-        <p>Use the demo aggregator now; replace it with a live provider later without changing the UI flow.</p>
+        <p>
+          {usesStitch
+            ? 'Continue through Stitch’s secure consent screen. Kape never asks for or stores your banking password.'
+            : 'The demo aggregator is active. Switch configuration to Stitch when sandbox credentials are available.'}
+        </p>
       </div>
 
       <div className="bank-connect-form">
@@ -107,7 +118,7 @@ export default function BankConnectionPanel({ connections }: BankConnectionPanel
         </label>
         <button type="button" className="wallet-button wallet-button--primary" onClick={connect} disabled={isPending}>
           {isPending && activeConnectionId === 'new' ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
-          Connect demo bank
+          {usesStitch ? 'Connect with Stitch' : 'Connect demo bank'}
         </button>
       </div>
 
@@ -153,7 +164,7 @@ export default function BankConnectionPanel({ connections }: BankConnectionPanel
             <Landmark size={20} />
             <div>
               <strong>No linked institutions</strong>
-              <span>Connect a demo bank to import balances, transactions and debit orders.</span>
+              <span>{usesStitch ? 'Connect through Stitch to import consented balances and activity.' : 'Connect a demo bank to import balances, transactions and debit orders.'}</span>
             </div>
           </div>
         )}
