@@ -16,10 +16,12 @@ import type {
   LinkedBankTransaction,
   PageResponse,
   PaymentMethod,
+  ResolvedKapeUser,
   WalletFundingInput,
   WalletFundingQuote,
   WalletSummary,
   WalletTransaction,
+  WalletTransferInput,
 } from '@/types/wallet';
 
 const ACCESS_TOKEN_COOKIE = 'kape-access-token';
@@ -53,6 +55,9 @@ const refreshWalletUi = () => {
   revalidatePath('/');
   revalidatePath('/wallet');
   revalidatePath('/linked-banks');
+  revalidatePath('/my-banks');
+  revalidatePath('/transaction-history');
+  revalidatePath('/payment-transfer');
 };
 
 export async function getWallet(): Promise<WalletSummary | null> {
@@ -238,6 +243,76 @@ export async function submitWalletFunding(
           linkedBankAccountId: input.linkedBankAccountId ?? null,
           reference: input.reference ?? null,
           idempotencyKey: input.idempotencyKey ?? `wallet-ui-${input.operation}-${randomUUID()}`,
+        }),
+      },
+      accessToken
+    );
+    refreshWalletUi();
+    return { ok: true, data: transaction };
+  } catch (error) {
+    return { ok: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function resolveKapeUser(identifier: string): Promise<ActionResult<ResolvedKapeUser>> {
+  try {
+    const normalizedIdentifier = identifier.trim();
+    if (!normalizedIdentifier) {
+      return { ok: false, error: 'Enter the recipient email address, mobile number, or Kape user ID.' };
+    }
+
+    const accessToken = requireAccessToken();
+    const user = await apiRequest<ResolvedKapeUser>(
+      '/api/kape-users/resolve',
+      {
+        method: 'POST',
+        body: JSON.stringify({ identifier: normalizedIdentifier }),
+      },
+      accessToken
+    );
+    return { ok: true, data: user };
+  } catch (error) {
+    return { ok: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function previewWalletTransfer(
+  input: WalletTransferInput
+): Promise<ActionResult<WalletFundingQuote>> {
+  try {
+    const accessToken = requireAccessToken();
+    const quote = await apiRequest<WalletFundingQuote>(
+      '/api/wallet/transfers/preview',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          recipientUserId: input.recipientUserId,
+          amount: input.amount,
+          reference: input.reference ?? null,
+        }),
+      },
+      accessToken
+    );
+    return { ok: true, data: quote };
+  } catch (error) {
+    return { ok: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function submitWalletTransfer(
+  input: WalletTransferInput
+): Promise<ActionResult<WalletTransaction>> {
+  try {
+    const accessToken = requireAccessToken();
+    const transaction = await apiRequest<WalletTransaction>(
+      '/api/wallet/transfers',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          recipientUserId: input.recipientUserId,
+          amount: input.amount,
+          reference: input.reference ?? null,
+          idempotencyKey: input.idempotencyKey ?? `wallet-ui-transfer-${randomUUID()}`,
         }),
       },
       accessToken
