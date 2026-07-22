@@ -64,6 +64,12 @@ public interface IStitchConnectionSecretStore
     Task DeleteAsync(string externalConnectionId, CancellationToken cancellationToken);
 }
 
+public interface IStitchSecretProtector
+{
+    string Protect(string plaintext);
+    string Unprotect(string protectedPayload);
+}
+
 public interface IStitchFinancialDataClient
 {
     Task<BankProviderSyncResult> SyncAsync(
