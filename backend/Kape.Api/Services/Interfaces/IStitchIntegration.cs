@@ -1,5 +1,3 @@
-using Kape.Api.Services.Interfaces;
-
 namespace Kape.Api.Services.Interfaces;
 
 public sealed record StitchAuthorizationSession(
@@ -9,7 +7,17 @@ public sealed record StitchAuthorizationSession(
     string CodeVerifier,
     DateTimeOffset ExpiresAt);
 
+public sealed record StitchAuthorizationRequest(
+    Guid UserId,
+    string State,
+    string Nonce,
+    string CodeVerifier,
+    string RedirectUri,
+    string? InstitutionId,
+    DateTimeOffset ExpiresAt);
+
 public sealed record StitchUserTokenSet(
+    string Subject,
     string AccessToken,
     string RefreshToken,
     string? IdToken,
@@ -18,7 +26,7 @@ public sealed record StitchUserTokenSet(
     DateTimeOffset UpdatedAt);
 
 public sealed record StitchConnectionSecret(
-    Guid BankConnectionId,
+    string ExternalConnectionId,
     string StitchUserId,
     StitchUserTokenSet Tokens,
     string? SyncCursor);
@@ -31,10 +39,11 @@ public interface IStitchOAuthClient
         string authorizationCode,
         string redirectUri,
         string codeVerifier,
+        string expectedNonce,
         CancellationToken cancellationToken);
 
     Task<StitchUserTokenSet> RefreshUserTokenAsync(
-        string refreshToken,
+        StitchUserTokenSet currentTokens,
         CancellationToken cancellationToken);
 
     Task<string> GetClientTokenAsync(
@@ -42,11 +51,17 @@ public interface IStitchOAuthClient
         CancellationToken cancellationToken);
 }
 
+public interface IStitchAuthorizationRequestStore
+{
+    Task SaveAsync(StitchAuthorizationRequest request, CancellationToken cancellationToken);
+    Task<StitchAuthorizationRequest?> TakeAsync(string state, CancellationToken cancellationToken);
+}
+
 public interface IStitchConnectionSecretStore
 {
     Task SaveAsync(StitchConnectionSecret secret, CancellationToken cancellationToken);
-    Task<StitchConnectionSecret?> GetAsync(Guid bankConnectionId, CancellationToken cancellationToken);
-    Task DeleteAsync(Guid bankConnectionId, CancellationToken cancellationToken);
+    Task<StitchConnectionSecret?> GetAsync(string externalConnectionId, CancellationToken cancellationToken);
+    Task DeleteAsync(string externalConnectionId, CancellationToken cancellationToken);
 }
 
 public interface IStitchFinancialDataClient
