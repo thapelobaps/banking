@@ -13,6 +13,7 @@ import {
 
 import HeaderBox from '@/components/HeaderBox';
 import BankConnectionPanel from '@/components/wallet/BankConnectionPanel';
+import { getConfiguredBankProvider } from '@/lib/actions/bank-connection.actions';
 import {
   getBankConnections,
   getLinkedAccountDebitOrders,
@@ -26,7 +27,8 @@ export default async function LinkedBanksPage() {
   const user = await getLoggedInUser();
   if (!user) redirect('/sign-in');
 
-  const [connections, linkedAccounts] = await Promise.all([
+  const [providerId, connections, linkedAccounts] = await Promise.all([
+    getConfiguredBankProvider(),
     getBankConnections(),
     getLinkedAccounts(),
   ]);
@@ -86,7 +88,7 @@ export default async function LinkedBanksPage() {
       </section>
 
       <section className="linked-bank-layout">
-        <BankConnectionPanel connections={connections} />
+        <BankConnectionPanel connections={connections} providerId={providerId} />
 
         <section className="wallet-panel linked-bank-overview-panel">
           <div className="wallet-panel__heading">
