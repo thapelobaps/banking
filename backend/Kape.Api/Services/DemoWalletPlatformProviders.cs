@@ -99,6 +99,14 @@ public sealed class DemoBankAggregationProvider : IBankAggregationProvider
 
         return Task.FromResult(new BankProviderSyncResult(accounts, transactions, debitOrders));
     }
+
+    public Task DisconnectAsync(
+        string externalConnectionId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class DemoPaymentTokenizationProvider : IPaymentTokenizationProvider
