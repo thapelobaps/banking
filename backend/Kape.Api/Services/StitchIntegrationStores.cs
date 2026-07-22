@@ -1,145 +1,273 @@
+using System.Data;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using Kape.Api.Configuration;
+using Kape.Api.Data;
+using Kape.Api.Domain;
 using Kape.Api.Services.Interfaces;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Kape.Api.Services;
 
-public sealed class ProtectedMemoryStitchAuthorizationRequestStore : IStitchAuthorizationRequestStore
+public sealed class AesGcmStitchSecretProtector : IStitchSecretProtector
 {
-    private const string CachePrefix = "stitch:authorization:";
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private const byte EnvelopeVersion = 1;
+    private const int NonceSize = 12;
+    private const int TagSize = 16;
+    private static readonly byte[] AssociatedData = Encoding.UTF8.GetBytes("Kape.Stitch.Secret.v1");
 
-    private readonly IMemoryCache _cache;
-    private readonly IDataProtector _protector;
+    private readonly byte[] _key;
 
-    public ProtectedMemoryStitchAuthorizationRequestStore(
-        IMemoryCache cache,
-        IDataProtectionProvider dataProtectionProvider)
+    public AesGcmStitchSecretProtector(IOptions<StitchIntegrationOptions> options)
     {
-        _cache = cache;
-        _protector = dataProtectionProvider.CreateProtector("Kape.Stitch.AuthorizationRequest.v1");
-    }
-
-    public Task SaveAsync(StitchAuthorizationRequest request, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var payload = JsonSerializer.Serialize(request, SerializerOptions);
-        var protectedPayload = _protector.Protect(payload);
-        _cache.Set(
-            CachePrefix + request.State,
-            protectedPayload,
-            new MemoryCacheEntryOptions
-            {
-                AbsoluteExpiration = request.ExpiresAt,
-                Size = 1,
-            });
-
-        return Task.CompletedTask;
-    }
-
-    public Task<StitchAuthorizationRequest?> TakeAsync(string state, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(state))
+        var configured = options.Value;
+        if (!configured.HasValidStorageEncryptionKey)
         {
-            return Task.FromResult<StitchAuthorizationRequest?>(null);
+            throw new InvalidOperationException(
+                "Providers:Stitch:StorageEncryptionKey must be a base64-encoded 256-bit key.");
         }
 
-        var key = CachePrefix + state.Trim();
-        if (!_cache.TryGetValue<string>(key, out var protectedPayload) || string.IsNullOrWhiteSpace(protectedPayload))
+        _key = Convert.FromBase64String(configured.StorageEncryptionKey.Trim());
+    }
+
+    public string Protect(string plaintext)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(plaintext);
+
+        var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
+        var nonce = RandomNumberGenerator.GetBytes(NonceSize);
+        var ciphertext = new byte[plaintextBytes.Length];
+        var tag = new byte[TagSize];
+
+        using var aes = new AesGcm(_key, TagSize);
+        aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, AssociatedData);
+
+        var envelope = new byte[1 + NonceSize + TagSize + ciphertext.Length];
+        envelope[0] = EnvelopeVersion;
+        nonce.CopyTo(envelope.AsSpan(1, NonceSize));
+        tag.CopyTo(envelope.AsSpan(1 + NonceSize, TagSize));
+        ciphertext.CopyTo(envelope.AsSpan(1 + NonceSize + TagSize));
+        CryptographicOperations.ZeroMemory(plaintextBytes);
+
+        return Convert.ToBase64String(envelope);
+    }
+
+    public string Unprotect(string protectedPayload)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(protectedPayload);
+
+        byte[] envelope;
+        try
         {
-            return Task.FromResult<StitchAuthorizationRequest?>(null);
+            envelope = Convert.FromBase64String(protectedPayload.Trim());
+        }
+        catch (FormatException exception)
+        {
+            throw new CryptographicException("The Stitch secret envelope is invalid.", exception);
         }
 
-        _cache.Remove(key);
+        if (envelope.Length < 1 + NonceSize + TagSize || envelope[0] != EnvelopeVersion)
+        {
+            throw new CryptographicException("The Stitch secret envelope version is invalid.");
+        }
+
+        var nonce = envelope.AsSpan(1, NonceSize);
+        var tag = envelope.AsSpan(1 + NonceSize, TagSize);
+        var ciphertext = envelope.AsSpan(1 + NonceSize + TagSize);
+        var plaintext = new byte[ciphertext.Length];
+
+        using var aes = new AesGcm(_key, TagSize);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext, AssociatedData);
 
         try
         {
-            var payload = _protector.Unprotect(protectedPayload);
-            var request = JsonSerializer.Deserialize<StitchAuthorizationRequest>(payload, SerializerOptions);
-            if (request is null || request.ExpiresAt <= DateTimeOffset.UtcNow)
-            {
-                return Task.FromResult<StitchAuthorizationRequest?>(null);
-            }
-
-            return Task.FromResult<StitchAuthorizationRequest?>(request);
+            return Encoding.UTF8.GetString(plaintext);
         }
-        catch (Exception exception) when (exception is CryptographicException or JsonException)
+        finally
         {
-            return Task.FromResult<StitchAuthorizationRequest?>(null);
+            CryptographicOperations.ZeroMemory(plaintext);
+            CryptographicOperations.ZeroMemory(envelope);
         }
     }
 }
 
-public sealed class ProtectedMemoryStitchConnectionSecretStore : IStitchConnectionSecretStore
+public sealed class SqlStitchAuthorizationRequestStore(
+    KapeDbContext dbContext,
+    IStitchSecretProtector protector) : IStitchAuthorizationRequestStore
 {
-    private const string CachePrefix = "stitch:connection-secret:";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly IMemoryCache _cache;
-    private readonly IDataProtector _protector;
-
-    public ProtectedMemoryStitchConnectionSecretStore(
-        IMemoryCache cache,
-        IDataProtectionProvider dataProtectionProvider)
+    public async Task SaveAsync(StitchAuthorizationRequest request, CancellationToken cancellationToken)
     {
-        _cache = cache;
-        _protector = dataProtectionProvider.CreateProtector("Kape.Stitch.ConnectionSecret.v1");
-    }
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.State);
+        var now = DateTimeOffset.UtcNow;
 
-    public Task SaveAsync(StitchConnectionSecret secret, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
+        await dbContext.StitchAuthorizationRequests
+            .Where(record => record.ExpiresAt <= now)
+            .ExecuteDeleteAsync(cancellationToken);
 
-        var payload = JsonSerializer.Serialize(secret, SerializerOptions);
-        var protectedPayload = _protector.Protect(payload);
-        _cache.Set(
-            CachePrefix + secret.ExternalConnectionId,
-            protectedPayload,
-            new MemoryCacheEntryOptions
+        var state = request.State.Trim();
+        var record = await dbContext.StitchAuthorizationRequests
+            .SingleOrDefaultAsync(item => item.State == state, cancellationToken);
+        var protectedPayload = protector.Protect(JsonSerializer.Serialize(request, SerializerOptions));
+
+        if (record is null)
+        {
+            dbContext.StitchAuthorizationRequests.Add(new StitchAuthorizationRequestRecord
             {
-                Size = 1,
-                Priority = CacheItemPriority.High,
+                State = state,
+                UserId = request.UserId,
+                ProtectedPayload = protectedPayload,
+                ExpiresAt = request.ExpiresAt,
+                CreatedAt = now,
             });
+        }
+        else
+        {
+            record.UserId = request.UserId;
+            record.ProtectedPayload = protectedPayload;
+            record.ExpiresAt = request.ExpiresAt;
+            record.CreatedAt = now;
+        }
 
-        return Task.CompletedTask;
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<StitchConnectionSecret?> GetAsync(
-        string externalConnectionId,
+    public async Task<StitchAuthorizationRequest?> TakeAsync(
+        string state,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(externalConnectionId) ||
-            !_cache.TryGetValue<string>(CachePrefix + externalConnectionId.Trim(), out var protectedPayload) ||
-            string.IsNullOrWhiteSpace(protectedPayload))
+        if (string.IsNullOrWhiteSpace(state))
         {
-            return Task.FromResult<StitchConnectionSecret?>(null);
+            return null;
+        }
+
+        var normalizedState = state.Trim();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+
+        var record = await dbContext.StitchAuthorizationRequests
+            .SingleOrDefaultAsync(item => item.State == normalizedState, cancellationToken);
+        if (record is null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return null;
+        }
+
+        dbContext.StitchAuthorizationRequests.Remove(record);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        if (record.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            return null;
         }
 
         try
         {
-            var payload = _protector.Unprotect(protectedPayload);
-            return Task.FromResult(
-                JsonSerializer.Deserialize<StitchConnectionSecret>(payload, SerializerOptions));
+            var payload = protector.Unprotect(record.ProtectedPayload);
+            var request = JsonSerializer.Deserialize<StitchAuthorizationRequest>(payload, SerializerOptions);
+            return request is not null &&
+                   string.Equals(request.State, normalizedState, StringComparison.Ordinal)
+                ? request
+                : null;
         }
         catch (Exception exception) when (exception is CryptographicException or JsonException)
         {
-            return Task.FromResult<StitchConnectionSecret?>(null);
+            return null;
+        }
+    }
+}
+
+public sealed class SqlStitchConnectionSecretStore(
+    KapeDbContext dbContext,
+    IStitchSecretProtector protector) : IStitchConnectionSecretStore
+{
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
+    public async Task SaveAsync(StitchConnectionSecret secret, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secret.ExternalConnectionId);
+        var externalConnectionId = secret.ExternalConnectionId.Trim();
+        var now = DateTimeOffset.UtcNow;
+        var record = await dbContext.StitchConnectionSecrets
+            .SingleOrDefaultAsync(
+                item => item.ExternalConnectionId == externalConnectionId,
+                cancellationToken);
+        var protectedPayload = protector.Protect(JsonSerializer.Serialize(secret, SerializerOptions));
+
+        if (record is null)
+        {
+            dbContext.StitchConnectionSecrets.Add(new StitchConnectionSecretRecord
+            {
+                ExternalConnectionId = externalConnectionId,
+                ProtectedPayload = protectedPayload,
+                AccessTokenExpiresAt = secret.Tokens.AccessTokenExpiresAt,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+        }
+        else
+        {
+            record.ProtectedPayload = protectedPayload;
+            record.AccessTokenExpiresAt = secret.Tokens.AccessTokenExpiresAt;
+            record.UpdatedAt = now;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<StitchConnectionSecret?> GetAsync(
+        string externalConnectionId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(externalConnectionId))
+        {
+            return null;
+        }
+
+        var normalizedId = externalConnectionId.Trim();
+        var record = await dbContext.StitchConnectionSecrets
+            .SingleOrDefaultAsync(
+                item => item.ExternalConnectionId == normalizedId,
+                cancellationToken);
+        if (record is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var payload = protector.Unprotect(record.ProtectedPayload);
+            var secret = JsonSerializer.Deserialize<StitchConnectionSecret>(payload, SerializerOptions);
+            return secret is not null &&
+                   string.Equals(secret.ExternalConnectionId, normalizedId, StringComparison.Ordinal)
+                ? secret
+                : null;
+        }
+        catch (Exception exception) when (exception is CryptographicException or JsonException)
+        {
+            dbContext.StitchConnectionSecrets.Remove(record);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return null;
         }
     }
 
-    public Task DeleteAsync(string externalConnectionId, CancellationToken cancellationToken)
+    public async Task DeleteAsync(
+        string externalConnectionId,
+        CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (!string.IsNullOrWhiteSpace(externalConnectionId))
+        if (string.IsNullOrWhiteSpace(externalConnectionId))
         {
-            _cache.Remove(CachePrefix + externalConnectionId.Trim());
+            return;
         }
 
-        return Task.CompletedTask;
+        var normalizedId = externalConnectionId.Trim();
+        await dbContext.StitchConnectionSecrets
+            .Where(item => item.ExternalConnectionId == normalizedId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 }
