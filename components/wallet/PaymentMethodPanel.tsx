@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Loader2, Plus, ShieldCheck } from 'lucide-react';
+import { CreditCard, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 
 import {
   createDemoPaymentMethod,
+  removePaymentMethod,
   setDefaultPaymentMethod,
 } from '@/lib/actions/wallet.actions';
 import type { DemoCardInput, PaymentMethod } from '@/types/wallet';
@@ -14,7 +15,14 @@ type PaymentMethodPanelProps = {
   paymentMethods: PaymentMethod[];
 };
 
-const currentYear = new Date().getFullYear();
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+
+const isExpired = (method: Pick<PaymentMethod, 'expiryMonth' | 'expiryYear' | 'status'>) =>
+  method.status === 'expired' ||
+  method.expiryYear < currentYear ||
+  (method.expiryYear === currentYear && method.expiryMonth < currentMonth);
 
 export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPanelProps) {
   const router = useRouter();
@@ -27,6 +35,7 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
   const [expiryYear, setExpiryYear] = useState(currentYear + 2);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
 
   const addCard = () => {
     if (!/^\d{4}$/.test(last4)) {
@@ -35,6 +44,29 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
       return;
     }
 
+    if (expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+      setIsError(true);
+      setMessage('Choose a card expiry date that has not passed.');
+      return;
+    }
+
+    const duplicate = paymentMethods.some(
+      (method) =>
+        method.status !== 'removed' &&
+        method.bankName.toLowerCase() === bankName.toLowerCase() &&
+        method.brand.toLowerCase() === brand.toLowerCase() &&
+        method.last4 === last4 &&
+        method.expiryMonth === expiryMonth &&
+        method.expiryYear === expiryYear
+    );
+
+    if (duplicate) {
+      setIsError(true);
+      setMessage('That tokenised card is already saved.');
+      return;
+    }
+
+    setActiveAction('add');
     startTransition(async () => {
       const result = await createDemoPaymentMethod({
         bankName,
@@ -47,27 +79,55 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
       if (!result.ok) {
         setIsError(true);
         setMessage(result.error);
+        setActiveAction(null);
         return;
       }
 
       setIsError(false);
       setMessage(`${result.data.bankName} ${result.data.brand} ending ${result.data.last4} is ready.`);
       setShowForm(false);
+      setActiveAction(null);
       router.refresh();
     });
   };
 
   const makeDefault = (paymentMethodId: string) => {
+    setActiveAction(`default:${paymentMethodId}`);
     startTransition(async () => {
       const result = await setDefaultPaymentMethod(paymentMethodId);
       if (!result.ok) {
         setIsError(true);
         setMessage(result.error);
+        setActiveAction(null);
         return;
       }
 
       setIsError(false);
       setMessage('Default funding card updated.');
+      setActiveAction(null);
+      router.refresh();
+    });
+  };
+
+  const removeCard = (method: PaymentMethod) => {
+    const confirmed = window.confirm(
+      `Remove ${method.bankName} ${method.brand} ending ${method.last4}? Existing wallet transactions will remain in your history.`
+    );
+    if (!confirmed) return;
+
+    setActiveAction(`remove:${method.id}`);
+    startTransition(async () => {
+      const result = await removePaymentMethod(method.id);
+      if (!result.ok) {
+        setIsError(true);
+        setMessage(result.error);
+        setActiveAction(null);
+        return;
+      }
+
+      setIsError(false);
+      setMessage(`${method.bankName} ${method.brand} ending ${method.last4} was removed.`);
+      setActiveAction(null);
       router.refresh();
     });
   };
@@ -78,12 +138,15 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
         <div>
           <span className="wallet-eyebrow">Tokenised cards</span>
           <h2>Payment methods</h2>
-          <p>Kape stores only a token and masked card metadata.</p>
+          <p>Kape stores only a provider token and masked card metadata.</p>
         </div>
         <button
           type="button"
           className="wallet-icon-button"
-          onClick={() => setShowForm((value) => !value)}
+          onClick={() => {
+            setShowForm((value) => !value);
+            setMessage(null);
+          }}
           aria-label="Add a demo payment method"
         >
           <Plus size={18} />
@@ -92,28 +155,56 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
 
       <div className="payment-method-list">
         {paymentMethods.length ? (
-          paymentMethods.map((method) => (
-            <article key={method.id} className={`payment-method-card ${method.isDefault ? 'is-default' : ''}`}>
-              <div className="payment-method-card__icon">
-                <CreditCard size={20} />
-              </div>
-              <div className="payment-method-card__details">
-                <div>
-                  <strong>{method.bankName}</strong>
-                  {method.isDefault ? <span>Default</span> : null}
+          paymentMethods.map((method) => {
+            const expired = isExpired(method);
+            const defaultAction = activeAction === `default:${method.id}`;
+            const removeAction = activeAction === `remove:${method.id}`;
+
+            return (
+              <article key={method.id} className={`payment-method-card ${method.isDefault && !expired ? 'is-default' : ''}`}>
+                <div className="payment-method-card__icon">
+                  <CreditCard size={20} />
                 </div>
-                <p>{method.brand} •••• {method.last4}</p>
-                <small>Expires {String(method.expiryMonth).padStart(2, '0')}/{String(method.expiryYear).slice(-2)}</small>
-              </div>
-              {!method.isDefault && method.status === 'active' ? (
-                <button type="button" onClick={() => makeDefault(method.id)} disabled={isPending}>
-                  Make default
-                </button>
-              ) : (
-                <ShieldCheck size={18} aria-label="Verified card" />
-              )}
-            </article>
-          ))
+                <div className="payment-method-card__details">
+                  <div>
+                    <strong>{method.bankName}</strong>
+                    {expired ? (
+                      <span className="wallet-status wallet-status--expired">Expired</span>
+                    ) : method.isDefault ? (
+                      <span>Default</span>
+                    ) : null}
+                  </div>
+                  <p>{method.brand} •••• {method.last4}</p>
+                  <small>Expires {String(method.expiryMonth).padStart(2, '0')}/{String(method.expiryYear).slice(-2)}</small>
+                </div>
+                <div className="bank-connection-row__actions">
+                  {!expired && !method.isDefault && method.status === 'active' ? (
+                    <button
+                      type="button"
+                      title="Make default funding card"
+                      aria-label={`Make ${method.bankName} ending ${method.last4} the default card`}
+                      onClick={() => makeDefault(method.id)}
+                      disabled={isPending}
+                    >
+                      {isPending && defaultAction ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                    </button>
+                  ) : !expired ? (
+                    <ShieldCheck size={18} aria-label="Verified default card" />
+                  ) : null}
+                  <button
+                    type="button"
+                    title="Remove payment method"
+                    aria-label={`Remove ${method.bankName} ending ${method.last4}`}
+                    className="is-danger"
+                    onClick={() => removeCard(method)}
+                    disabled={isPending}
+                  >
+                    {isPending && removeAction ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+              </article>
+            );
+          })
         ) : (
           <div className="wallet-empty-inline">
             <CreditCard size={20} />
@@ -170,7 +261,7 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
             </select>
           </label>
           <button type="button" className="wallet-button wallet-button--primary" onClick={addCard} disabled={isPending}>
-            {isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {isPending && activeAction === 'add' ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
             Tokenise demo card
           </button>
         </div>
