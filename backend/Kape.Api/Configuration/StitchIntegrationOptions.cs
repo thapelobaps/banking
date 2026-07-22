@@ -32,10 +32,20 @@ public sealed class StitchIntegrationOptions
     public string[] ClientScopes { get; set; } = ["client_paymentrequest"];
     public int ClientTokenRefreshSkewSeconds { get; set; } = 120;
 
-    public bool HasRequiredCredentials =>
-        !string.IsNullOrWhiteSpace(ClientId) &&
-        !string.IsNullOrWhiteSpace(ClientSecret) &&
-        Uri.TryCreate(RedirectUri, UriKind.Absolute, out _);
+    public bool HasRequiredCredentials
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ClientId) ||
+                string.IsNullOrWhiteSpace(ClientSecret) ||
+                !Uri.TryCreate(RedirectUri, UriKind.Absolute, out var redirectUri))
+            {
+                return false;
+            }
+
+            return string.Equals(redirectUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     public bool HasRequiredUserScopes =>
         UserScopes.Contains("openid", StringComparer.Ordinal) &&
