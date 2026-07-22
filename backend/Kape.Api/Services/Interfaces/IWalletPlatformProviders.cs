@@ -66,6 +66,10 @@ public interface IBankAggregationProvider
     Task<BankProviderSyncResult> SyncAsync(
         string externalConnectionId,
         CancellationToken cancellationToken);
+
+    Task DisconnectAsync(
+        string externalConnectionId,
+        CancellationToken cancellationToken);
 }
 
 public sealed record PaymentSetupSession(
