@@ -8,6 +8,7 @@ using Kape.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Kape.Api.Configuration;
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         AddDatabase(services, configuration);
         AddIdentity(services);
         AddJwtAuthentication(services, configuration);
+        AddProviderConfiguration(services, configuration);
         AddApplicationServices(services);
         AddCors(services, configuration);
 
@@ -101,6 +103,40 @@ public static class ServiceCollectionExtensions
             });
     }
 
+    private static void AddProviderConfiguration(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services
+            .AddOptions<BankAggregationProviderOptions>()
+            .Bind(configuration.GetSection(BankAggregationProviderOptions.SectionName))
+            .Validate(
+                options => options.ActiveProvider.Trim().ToLowerInvariant() is "demo" or "demo-bank-aggregator" or "stitch",
+                "Providers:BankAggregation:ActiveProvider must be demo-bank-aggregator or stitch.")
+            .ValidateOnStart();
+
+        services
+            .AddOptions<StitchIntegrationOptions>()
+            .Bind(configuration.GetSection(StitchIntegrationOptions.SectionName))
+            .Validate(
+                options => !options.Enabled || options.HasRequiredCredentials,
+                "Stitch is enabled but ClientId, ClientSecret, or an absolute RedirectUri is missing.")
+            .Validate(
+                options => !options.Enabled || options.HasRequiredUserScopes,
+                "Stitch user scopes must include openid, offline_access, accounts, balances, and transactions.")
+            .Validate(
+                options => options.ClientTokenRefreshSkewSeconds is >= 30 and <= 600,
+                "Stitch client-token refresh skew must be between 30 and 600 seconds.")
+            .ValidateOnStart();
+
+        services.AddHttpClient("Stitch", (_, client) =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Kape-Stitch-Adapter/1.0");
+        });
+    }
+
     private static void AddApplicationServices(IServiceCollection services)
     {
         services.AddScoped<IUserRepository, UserRepository>();
@@ -120,7 +156,26 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
 
         services.AddSingleton<IBankingProvider, SouthAfricanDemoBankingProvider>();
-        services.AddSingleton<IBankAggregationProvider, DemoBankAggregationProvider>();
+        services.AddSingleton<DemoBankAggregationProvider>();
+        services.AddSingleton<IBankAggregationProvider>(serviceProvider =>
+        {
+            var configuredProvider = serviceProvider
+                .GetRequiredService<IOptions<BankAggregationProviderOptions>>()
+                .Value
+                .ActiveProvider
+                .Trim()
+                .ToLowerInvariant();
+
+            return configuredProvider switch
+            {
+                "demo" or "demo-bank-aggregator" => serviceProvider.GetRequiredService<DemoBankAggregationProvider>(),
+                "stitch" => throw new InvalidOperationException(
+                    "The Stitch provider has been selected, but the live Stitch adapter has not been registered yet. " +
+                    "Implement IBankAggregationProvider with IStitchOAuthClient, IStitchConnectionSecretStore, and " +
+                    "IStitchFinancialDataClient, then replace this switch branch."),
+                _ => throw new InvalidOperationException($"Bank aggregation provider '{configuredProvider}' is not supported."),
+            };
+        });
         services.AddSingleton<IPaymentTokenizationProvider, DemoPaymentTokenizationProvider>();
         services.AddSingleton<IDigitalProductProvider, DemoDigitalProductProvider>();
 
