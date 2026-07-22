@@ -27,7 +27,7 @@ public sealed class StitchSecretProtectorTests
         var envelope = Convert.FromBase64String(protector.Protect("sensitive-token"));
         envelope[^1] ^= 0x01;
 
-        Assert.Throws<CryptographicException>(() =>
+        Assert.ThrowsAny<CryptographicException>(() =>
             protector.Unprotect(Convert.ToBase64String(envelope)));
     }
 
@@ -38,7 +38,7 @@ public sealed class StitchSecretProtectorTests
         var second = CreateProtector(RandomNumberGenerator.GetBytes(32));
         var protectedPayload = first.Protect("sandbox-refresh-token");
 
-        Assert.Throws<CryptographicException>(() => second.Unprotect(protectedPayload));
+        Assert.ThrowsAny<CryptographicException>(() => second.Unprotect(protectedPayload));
     }
 
     private static AesGcmStitchSecretProtector CreateProtector(byte[] key) =>
