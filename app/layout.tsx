@@ -8,6 +8,7 @@ import './kape-wallet-ui.css';
 import './kape-overview-ui.css';
 import './kape-responsive-fix.css';
 import './kape-desktop-rail.css';
+import './kape-unified-rail.css';
 import './kape-density-90.css';
 import './kape-mobile.css';
 
