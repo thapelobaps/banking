@@ -27,8 +27,10 @@ public sealed class WalletQueueMigrationTests
                 .Select(operation => operation.Sql))
             .ToUpperInvariant();
 
+        Assert.Contains("SET TRANSACTION ISOLATION LEVEL READ COMMITTED", sql);
         Assert.Contains("READPAST", sql);
         Assert.Contains("READCOMMITTEDLOCK", sql);
         Assert.Contains("UPDLOCK", sql);
+        Assert.Contains("ROWLOCK", sql);
     }
 }
