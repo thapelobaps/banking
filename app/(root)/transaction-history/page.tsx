@@ -180,7 +180,11 @@ const TransactionHistory = async ({ searchParams }: TransactionHistoryProps) => 
         <span className="kape-count-pill">{filteredActivity.length} transaction{filteredActivity.length === 1 ? '' : 's'}</span>
       </header>
 
-      <MoneySourceCarousel items={sourceCards} selectedId={selectedSource} />
+      <MoneySourceCarousel
+        items={sourceCards}
+        selectedId={selectedSource}
+        cardholderName={`${loggedIn.firstName} ${loggedIn.lastName}`}
+      />
 
       <form className="history-search" action="/transaction-history" method="get">
         <input type="hidden" name="source" value={selectedSource} />
