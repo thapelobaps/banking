@@ -10,14 +10,29 @@ export const sidebarLinks = [
     label: 'Kape Wallet',
   },
   {
+    imgURL: '/icons/shopping-bag.svg',
+    route: '/marketplace',
+    label: 'Marketplace',
+  },
+  {
+    imgURL: '/icons/coins.svg',
+    route: '/vouchers',
+    label: 'Vouchers',
+  },
+  {
+    imgURL: '/icons/monitor.svg',
+    route: '/prepaid',
+    label: 'Prepaid',
+  },
+  {
+    imgURL: '/icons/money-send.svg',
+    route: '/payment-requests',
+    label: 'Requests',
+  },
+  {
     imgURL: '/icons/connect-bank.svg',
     route: '/linked-banks',
     label: 'Linked Banks',
-  },
-  {
-    imgURL: '/icons/dollar-circle.svg',
-    route: '/my-banks',
-    label: 'Demo Accounts',
   },
   {
     imgURL: '/icons/transaction.svg',
@@ -28,6 +43,11 @@ export const sidebarLinks = [
     imgURL: '/icons/money-send.svg',
     route: '/payment-transfer',
     label: 'Transfer',
+  },
+  {
+    imgURL: '/icons/dollar-circle.svg',
+    route: '/my-banks',
+    label: 'Demo Accounts',
   },
 ];
 

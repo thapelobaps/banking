@@ -9,6 +9,7 @@ import './kape-overview-ui.css';
 import './kape-integrated-money-pages.css';
 import './kape-source-cards.css';
 import './kape-svg-card-faces.css';
+import './kape-marketplace.css';
 import './kape-responsive-fix.css';
 import './kape-desktop-rail.css';
 import './kape-unified-rail.css';
