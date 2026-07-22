@@ -15,6 +15,7 @@ import {
 import HeaderBox from '@/components/HeaderBox';
 import BankConnectionPanel from '@/components/wallet/BankConnectionPanel';
 import PaymentMethodPanel from '@/components/wallet/PaymentMethodPanel';
+import { getConfiguredBankProvider } from '@/lib/actions/bank-connection.actions';
 import {
   getBankConnections,
   getLinkedAccounts,
@@ -28,7 +29,8 @@ const MyBanks = async () => {
   const loggedIn = await getLoggedInUser();
   if (!loggedIn) redirect('/sign-in');
 
-  const [wallet, linkedAccounts, connections, paymentMethods] = await Promise.all([
+  const [providerId, wallet, linkedAccounts, connections, paymentMethods] = await Promise.all([
+    getConfiguredBankProvider(),
     getWallet(),
     getLinkedAccounts(),
     getBankConnections(),
@@ -187,7 +189,7 @@ const MyBanks = async () => {
       </section>
 
       <section className="money-account-management-grid">
-        <BankConnectionPanel connections={connections} />
+        <BankConnectionPanel connections={connections} providerId={providerId} />
         <PaymentMethodPanel paymentMethods={paymentMethods} />
       </section>
     </section>
