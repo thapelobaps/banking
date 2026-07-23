@@ -5,6 +5,7 @@ namespace Kape.Api.Services;
 
 public sealed class DemoPayInProvider : IPayInProvider
 {
+    private const string PaymentPrefix = "demo_payin_";
     private readonly ConcurrentDictionary<string, PayInProviderSession> _payments = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, PayInProviderSession> _paymentRequests = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, PayInProviderRefundResult> _refunds = new(StringComparer.Ordinal);
@@ -33,28 +34,13 @@ public sealed class DemoPayInProvider : IPayInProvider
             return Task.FromResult(existing);
         }
 
-        var externalPaymentId = $"demo_payin_{Guid.NewGuid():N}";
         var scenario = NormaliseScenario(request.Scenario);
-        var now = DateTimeOffset.UtcNow;
-        var (status, failureCode, completedAt) = scenario switch
-        {
-            "success" => ("completed", (string?)null, (DateTimeOffset?)now),
-            "pending" => ("pending", null, null),
-            "cancelled" => ("cancelled", "customer_cancelled", now),
-            "failed" => ("failed", "demo_declined", now),
-            "insufficient_funds" => ("failed", "insufficient_funds", now),
-            _ => ("awaiting_approval", null, null),
-        };
-
-        var redirectUrl = BuildRedirectUrl(request.ReturnUrl, externalPaymentId, scenario);
-        var session = new PayInProviderSession(
-            ProviderId,
+        var externalPaymentId = $"{PaymentPrefix}{scenario}_{Guid.NewGuid():N}";
+        var session = BuildSession(
             externalPaymentId,
-            status,
-            redirectUrl,
-            now.AddMinutes(15),
-            completedAt,
-            failureCode);
+            scenario,
+            request.ReturnUrl,
+            DateTimeOffset.UtcNow);
 
         _payments[externalPaymentId] = session;
         _paymentRequests[idempotencyKey] = session;
@@ -66,25 +52,26 @@ public sealed class DemoPayInProvider : IPayInProvider
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var id = externalPaymentId.Trim();
 
-        if (!_payments.TryGetValue(externalPaymentId.Trim(), out var session))
+        if (_payments.TryGetValue(id, out var session))
         {
-            throw new KeyNotFoundException("The demo payment could not be found.");
+            return Task.FromResult(session);
         }
 
+        var scenario = ParseScenario(id)
+            ?? throw new KeyNotFoundException("The demo payment could not be found.");
+        session = BuildSession(id, scenario, returnUrl: null, DateTimeOffset.UtcNow);
+        _payments[id] = session;
         return Task.FromResult(session);
     }
 
-    public Task<PayInProviderRefundResult> RefundAsync(
+    public async Task<PayInProviderRefundResult> RefundAsync(
         PayInProviderRefundRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        if (!_payments.TryGetValue(request.ExternalPaymentId.Trim(), out var payment))
-        {
-            throw new KeyNotFoundException("The demo payment could not be found.");
-        }
+        var payment = await GetPaymentAsync(request.ExternalPaymentId, cancellationToken);
 
         if (payment.Status is not ("completed" or "refunded"))
         {
@@ -97,9 +84,14 @@ public sealed class DemoPayInProvider : IPayInProvider
         }
 
         var key = request.IdempotencyKey.Trim();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw new ArgumentException("A refund idempotency key is required.", nameof(request));
+        }
+
         if (_refunds.TryGetValue(key, out var existing))
         {
-            return Task.FromResult(existing);
+            return existing;
         }
 
         var createdAt = DateTimeOffset.UtcNow;
@@ -120,7 +112,33 @@ public sealed class DemoPayInProvider : IPayInProvider
             FailureCode = null,
         };
 
-        return Task.FromResult(result);
+        return result;
+    }
+
+    private PayInProviderSession BuildSession(
+        string externalPaymentId,
+        string scenario,
+        string? returnUrl,
+        DateTimeOffset now)
+    {
+        var (status, failureCode, completedAt) = scenario switch
+        {
+            "success" => ("completed", (string?)null, (DateTimeOffset?)now),
+            "pending" => ("pending", null, null),
+            "cancelled" => ("cancelled", "customer_cancelled", now),
+            "failed" => ("failed", "demo_declined", now),
+            "insufficient_funds" => ("failed", "insufficient_funds", now),
+            _ => ("awaiting_approval", null, null),
+        };
+
+        return new PayInProviderSession(
+            ProviderId,
+            externalPaymentId,
+            status,
+            BuildRedirectUrl(returnUrl, externalPaymentId, scenario),
+            now.AddMinutes(15),
+            completedAt,
+            failureCode);
     }
 
     private static string NormaliseScenario(string? scenario) =>
@@ -135,6 +153,33 @@ public sealed class DemoPayInProvider : IPayInProvider
                 "declined" or "failed" => "failed",
                 _ => "awaiting_approval",
             };
+
+    private static string? ParseScenario(string externalPaymentId)
+    {
+        if (!externalPaymentId.StartsWith(PaymentPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var value = externalPaymentId[PaymentPrefix.Length..];
+        foreach (var scenario in new[]
+                 {
+                     "insufficient_funds",
+                     "awaiting_approval",
+                     "cancelled",
+                     "pending",
+                     "failed",
+                     "success",
+                 })
+        {
+            if (value.StartsWith($"{scenario}_", StringComparison.Ordinal))
+            {
+                return scenario;
+            }
+        }
+
+        return null;
+    }
 
     private static string? BuildRedirectUrl(
         string? returnUrl,
