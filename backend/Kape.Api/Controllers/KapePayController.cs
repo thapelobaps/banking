@@ -60,6 +60,13 @@ public sealed class KapePayController(IKapePayService service) : ApiControllerBa
         CancellationToken cancellationToken) =>
         Accepted(await service.RefundAsync(CurrentUserId, id, request, cancellationToken));
 
+    [HttpPost("payments/{id:guid}/wallet-reversal")]
+    public async Task<ActionResult<PaymentAttemptResponseDto>> ReverseWalletPayment(
+        Guid id,
+        [FromBody] CreateWalletPurchaseReversalRequestDto request,
+        CancellationToken cancellationToken) =>
+        Accepted(await service.ReverseWalletPaymentAsync(CurrentUserId, id, request, cancellationToken));
+
     [HttpPost("reconciliation")]
     public async Task<ActionResult<PaymentReconciliationResponseDto>> Reconcile(
         CancellationToken cancellationToken) =>
