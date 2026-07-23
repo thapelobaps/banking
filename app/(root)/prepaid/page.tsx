@@ -3,15 +3,15 @@ import { redirect } from 'next/navigation';
 import { CheckCircle2, Clock3, ReceiptText } from 'lucide-react';
 
 import HeaderBox from '@/components/HeaderBox';
+import KapePayPrepaidPanel from '@/components/marketplace/KapePayPrepaidPanel';
 import MarketplaceBrandMark from '@/components/marketplace/MarketplaceBrandMark';
-import PrepaidPurchasePanel from '@/components/marketplace/PrepaidPurchasePanel';
 import {
   getPrepaidOperators,
   getPrepaidOrders,
   getPrepaidProducts,
 } from '@/lib/actions/marketplace.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
-import { getWallet } from '@/lib/actions/wallet.actions';
+import { getLinkedAccounts, getWallet } from '@/lib/actions/wallet.actions';
 import { formatAmount, formatDateTime } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,9 @@ export default async function PrepaidPage() {
   const loggedIn = await getLoggedInUser();
   if (!loggedIn) redirect('/sign-in');
 
-  const [wallet, operators, products, ordersPage] = await Promise.all([
+  const [wallet, linkedAccounts, operators, products, ordersPage] = await Promise.all([
     getWallet(),
+    getLinkedAccounts(),
     getPrepaidOperators(),
     getPrepaidProducts(),
     getPrepaidOrders(1, 12),
@@ -42,18 +43,27 @@ export default async function PrepaidPage() {
   return (
     <section className="kape-page marketplace-page">
       <header className="kape-page-header">
-        <HeaderBox title="Prepaid services" subtext="Buy airtime and prepaid electricity with recipient validation and durable fulfilment." />
+        <HeaderBox title="Prepaid services" subtext="Buy airtime and electricity directly from a linked sandbox bank or synthetic Kape Wallet funds." />
         <Link className="marketplace-header-link" href="/marketplace">Marketplace home</Link>
       </header>
 
-      <PrepaidPurchasePanel operators={operators} products={products} walletAvailable={wallet.availableBalance} />
+      <div className="marketplace-message is-success" role="note">
+        Demonstration environment — linked-bank payments use provider orchestration and never deposit money into the Kape Wallet.
+      </div>
+
+      <KapePayPrepaidPanel
+        operators={operators}
+        products={products}
+        walletAvailable={wallet.availableBalance}
+        linkedAccounts={linkedAccounts}
+      />
 
       <section className="marketplace-orders-section">
         <div className="marketplace-section-heading">
           <div>
             <span>Purchase history</span>
             <h2>Your prepaid orders</h2>
-            <p>Provider tokens and references become available when fulfilment completes.</p>
+            <p>Provider tokens and references become available only after payment and fulfilment complete.</p>
           </div>
           <span className="marketplace-wallet-pill">{ordersPage.total} orders</span>
         </div>
@@ -73,7 +83,7 @@ export default async function PrepaidPage() {
                 <strong>{formatAmount(order.amount)}</strong>
                 <p>{order.recipient} · {date.dateOnly}</p>
                 <div className="marketplace-order-card__footer">
-                  <span>{order.status === 'fulfilled' ? <CheckCircle2 size={15} /> : <Clock3 size={15} />} {order.status === 'fulfilled' ? 'Ready' : 'Provider queue'}</span>
+                  <span>{order.status === 'fulfilled' ? <CheckCircle2 size={15} /> : <Clock3 size={15} />} {order.status === 'fulfilled' ? 'Ready' : 'Payment or provider queue'}</span>
                   <Link href={`/receipts/prepaid/${order.id}`}><ReceiptText size={15} /> Receipt</Link>
                 </div>
               </article>

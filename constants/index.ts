@@ -25,6 +25,11 @@ export const sidebarLinks = [
     label: 'Prepaid',
   },
   {
+    imgURL: '/icons/transaction.svg',
+    route: '/payment-activity',
+    label: 'Kape Pay',
+  },
+  {
     imgURL: '/icons/money-send.svg',
     route: '/payment-requests',
     label: 'Requests',

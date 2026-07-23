@@ -28,6 +28,12 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
     public DbSet<PrepaidProduct> PrepaidProducts => Set<PrepaidProduct>();
     public DbSet<PrepaidOrder> PrepaidOrders => Set<PrepaidOrder>();
     public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<PaymentStatusHistory> PaymentStatusHistory => Set<PaymentStatusHistory>();
+    public DbSet<WalletReservation> WalletReservations => Set<WalletReservation>();
+    public DbSet<PaymentRefund> PaymentRefunds => Set<PaymentRefund>();
+    public DbSet<PaymentReconciliationRun> PaymentReconciliationRuns => Set<PaymentReconciliationRun>();
+    public DbSet<PaymentReconciliationIssue> PaymentReconciliationIssues => Set<PaymentReconciliationIssue>();
     public DbSet<WebhookInbox> WebhookInbox => Set<WebhookInbox>();
     public DbSet<QueueMessage> QueueMessages => Set<QueueMessage>();
     public DbSet<StitchAuthorizationRequestRecord> StitchAuthorizationRequests => Set<StitchAuthorizationRequestRecord>();
@@ -89,6 +95,7 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
         });
 
         builder.ConfigureWalletPlatform();
+        builder.ConfigurePaymentOrchestration();
         builder.Entity<BankConnection>()
             .ToTable("BankConnections", table => table.UseSqlOutputClause(false));
         builder.ApplyWalletPlatformRelationships();

@@ -34,6 +34,7 @@ public interface IWalletPlatformService
     Task<WalletOperationPreviewResponseDto> PreviewTransferAsync(Guid userId, WalletTransferPreviewRequestDto request, CancellationToken cancellationToken);
     Task<WalletTransactionResponseDto> CreateTransferAsync(Guid userId, WalletTransferRequestDto request, CancellationToken cancellationToken);
     Task<WalletTransactionResponseDto> SendMoneyAsync(Guid userId, SendWalletMoneyRequestDto request, CancellationToken cancellationToken);
+    Task<WalletTransactionResponseDto> ReverseWalletPurchaseAsync(Guid userId, Guid walletTransactionId, string reason, string idempotencyKey, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<LedgerAccountResponseDto>> GetLedgerAccountsAsync(Guid userId, CancellationToken cancellationToken);
     Task<PageResponseDto<LedgerEntryResponseDto>> GetLedgerEntriesAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken);

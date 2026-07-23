@@ -144,12 +144,33 @@ public sealed partial class WalletPlatformService : IWalletPlatformService
         return await _repository.GetLedgerAccountBalanceAsync(account.Id, cancellationToken);
     }
 
+    private async Task<decimal> GetActiveWalletReservationsAsync(
+        Wallet wallet,
+        CancellationToken cancellationToken)
+    {
+        var reservations = await _repository.ListAsync<WalletReservation>(
+            item => item.WalletId == wallet.Id &&
+                    item.UserId == wallet.UserId &&
+                    item.Status == "active",
+            cancellationToken: cancellationToken);
+        return reservations.Sum(item => item.Amount);
+    }
+
+    private async Task<decimal> GetWalletAvailableBalanceAsync(
+        Wallet wallet,
+        CancellationToken cancellationToken)
+    {
+        var ledgerBalance = await GetWalletBalanceValueAsync(wallet, cancellationToken);
+        var reserved = await GetActiveWalletReservationsAsync(wallet, cancellationToken);
+        return Math.Max(0m, ledgerBalance - reserved);
+    }
+
     private async Task EnsureSufficientFundsAsync(Wallet wallet, decimal required, CancellationToken cancellationToken)
     {
-        var balance = await GetWalletBalanceValueAsync(wallet, cancellationToken);
-        if (balance < required)
+        var available = await GetWalletAvailableBalanceAsync(wallet, cancellationToken);
+        if (available < required)
         {
-            throw Validation("amount", $"The wallet balance is insufficient. Available: R {balance:N2}.");
+            throw Validation("amount", $"The wallet balance is insufficient. Available: R {available:N2}.");
         }
     }
 
