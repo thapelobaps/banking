@@ -18,16 +18,24 @@ type PaymentMethodPanelProps = {
 const now = new Date();
 const currentYear = now.getFullYear();
 const currentMonth = now.getMonth() + 1;
+const hiddenPaymentMethodStatuses = new Set(['removed', 'deleted', 'revoked']);
 
 const isExpired = (method: Pick<PaymentMethod, 'expiryMonth' | 'expiryYear' | 'status'>) =>
   method.status === 'expired' ||
   method.expiryYear < currentYear ||
   (method.expiryYear === currentYear && method.expiryMonth < currentMonth);
 
+const isVisiblePaymentMethod = (method: Pick<PaymentMethod, 'status'>) =>
+  !hiddenPaymentMethodStatuses.has(method.status.trim().toLowerCase());
+
 export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [showForm, setShowForm] = useState(paymentMethods.length === 0);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
+  const visiblePaymentMethods = paymentMethods.filter(
+    (method) => isVisiblePaymentMethod(method) && !removedIds.has(method.id)
+  );
+  const [showForm, setShowForm] = useState(visiblePaymentMethods.length === 0);
   const [bankName, setBankName] = useState<DemoCardInput['bankName']>('Capitec');
   const [brand, setBrand] = useState<DemoCardInput['brand']>('Mastercard');
   const [last4, setLast4] = useState('3684');
@@ -50,9 +58,8 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
       return;
     }
 
-    const duplicate = paymentMethods.some(
+    const duplicate = visiblePaymentMethods.some(
       (method) =>
-        method.status !== 'removed' &&
         method.bankName.toLowerCase() === bankName.toLowerCase() &&
         method.brand.toLowerCase() === brand.toLowerCase() &&
         method.last4 === last4 &&
@@ -125,6 +132,11 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
         return;
       }
 
+      setRemovedIds((current) => {
+        const next = new Set(current);
+        next.add(method.id);
+        return next;
+      });
       setIsError(false);
       setMessage(`${method.bankName} ${method.brand} ending ${method.last4} was removed.`);
       setActiveAction(null);
@@ -154,8 +166,8 @@ export default function PaymentMethodPanel({ paymentMethods }: PaymentMethodPane
       </div>
 
       <div className="payment-method-list">
-        {paymentMethods.length ? (
-          paymentMethods.map((method) => {
+        {visiblePaymentMethods.length ? (
+          visiblePaymentMethods.map((method) => {
             const expired = isExpired(method);
             const defaultAction = activeAction === `default:${method.id}`;
             const removeAction = activeAction === `remove:${method.id}`;
