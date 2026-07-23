@@ -30,6 +30,8 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
     public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
     public DbSet<WebhookInbox> WebhookInbox => Set<WebhookInbox>();
     public DbSet<QueueMessage> QueueMessages => Set<QueueMessage>();
+    public DbSet<StitchAuthorizationRequestRecord> StitchAuthorizationRequests => Set<StitchAuthorizationRequestRecord>();
+    public DbSet<StitchConnectionSecretRecord> StitchConnectionSecrets => Set<StitchConnectionSecretRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -87,7 +89,10 @@ public sealed class KapeDbContext(DbContextOptions<KapeDbContext> options)
         });
 
         builder.ConfigureWalletPlatform();
+        builder.Entity<BankConnection>()
+            .ToTable("BankConnections", table => table.UseSqlOutputClause(false));
         builder.ApplyWalletPlatformRelationships();
         builder.ApplyWalletPlatformStorageAlignment();
+        builder.ConfigureStitchPersistence();
     }
 }

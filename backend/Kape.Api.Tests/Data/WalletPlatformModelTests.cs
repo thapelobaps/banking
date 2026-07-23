@@ -38,6 +38,16 @@ public sealed class WalletPlatformModelTests
     }
 
     [Fact]
+    public void BankConnectionModel_DisablesOutputClauseForTriggeredTable()
+    {
+        using var context = CreateContext();
+        var table = context.Model.GetRelationalModel().FindTable("BankConnections", schema: null);
+
+        Assert.NotNull(table);
+        Assert.False(table!.IsSqlOutputClauseUsed());
+    }
+
+    [Fact]
     public void QueueModel_UsesFilteredAtomicDequeueIndex()
     {
         using var context = CreateContext();

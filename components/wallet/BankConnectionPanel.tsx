@@ -25,6 +25,34 @@ const institutions = [
   { id: 'nedbank', name: 'Nedbank' },
 ];
 
+const isPlaceholderConnection = (connection: BankConnection) =>
+  connection.status === 'pending' &&
+  connection.institutionName.trim().toLowerCase() === 'pending bank selection';
+
+const connectionKey = (connection: BankConnection) =>
+  `${connection.providerId.trim().toLowerCase()}:${connection.institutionId.trim().toLowerCase()}`;
+
+const connectionTimestamp = (connection: BankConnection) =>
+  Date.parse(connection.lastSyncedAt ?? connection.createdAt);
+
+const selectVisibleConnections = (connections: BankConnection[]) => {
+  const selected = new Map<string, BankConnection>();
+
+  for (const connection of connections) {
+    if (isPlaceholderConnection(connection)) continue;
+
+    const key = connectionKey(connection);
+    const current = selected.get(key);
+    if (!current || connectionTimestamp(connection) > connectionTimestamp(current)) {
+      selected.set(key, connection);
+    }
+  }
+
+  return Array.from(selected.values()).sort(
+    (left, right) => connectionTimestamp(right) - connectionTimestamp(left)
+  );
+};
+
 export default function BankConnectionPanel({ connections, providerId }: BankConnectionPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -33,6 +61,7 @@ export default function BankConnectionPanel({ connections, providerId }: BankCon
   const [isError, setIsError] = useState(false);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const usesStitch = providerId === 'stitch';
+  const visibleConnections = selectVisibleConnections(connections);
 
   const connect = () => {
     setActiveConnectionId('new');
@@ -123,8 +152,8 @@ export default function BankConnectionPanel({ connections, providerId }: BankCon
       </div>
 
       <div className="bank-connection-list">
-        {connections.length ? (
-          connections.map((connection) => (
+        {visibleConnections.length ? (
+          visibleConnections.map((connection) => (
             <article key={connection.id} className="bank-connection-row">
               <div className="bank-connection-row__icon">
                 <Landmark size={19} />

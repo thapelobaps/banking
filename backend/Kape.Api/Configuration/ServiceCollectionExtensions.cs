@@ -122,6 +122,9 @@ public static class ServiceCollectionExtensions
                 options => !options.Enabled || options.HasRequiredCredentials,
                 "Stitch is enabled but ClientId, ClientSecret, or an absolute HTTPS RedirectUri is missing.")
             .Validate(
+                options => !options.Enabled || options.HasValidStorageEncryptionKey,
+                "Stitch is enabled but StorageEncryptionKey is not a base64-encoded 256-bit key.")
+            .Validate(
                 options => !options.Enabled || options.HasRequiredUserScopes,
                 "Stitch user scopes must include openid, offline_access, accounts, balances, and transactions.")
             .Validate(
@@ -155,15 +158,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVoucherCodeProtector, DataProtectionVoucherCodeProtector>();
         services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
 
-        services.AddSingleton<IStitchAuthorizationRequestStore, ProtectedMemoryStitchAuthorizationRequestStore>();
-        services.AddSingleton<IStitchConnectionSecretStore, ProtectedMemoryStitchConnectionSecretStore>();
+        services.AddSingleton<IStitchSecretProtector, AesGcmStitchSecretProtector>();
+        services.AddScoped<IStitchAuthorizationRequestStore, SqlStitchAuthorizationRequestStore>();
+        services.AddScoped<IStitchConnectionSecretStore, SqlStitchConnectionSecretStore>();
         services.AddSingleton<IStitchOAuthClient, StitchOAuthClient>();
         services.AddSingleton<IStitchFinancialDataClient, StitchFinancialDataClient>();
 
         services.AddSingleton<IBankingProvider, SouthAfricanDemoBankingProvider>();
         services.AddSingleton<DemoBankAggregationProvider>();
-        services.AddSingleton<StitchBankAggregationProvider>();
-        services.AddSingleton<IBankAggregationProvider>(serviceProvider =>
+        services.AddScoped<StitchBankAggregationProvider>();
+        services.AddScoped<IBankAggregationProvider>(serviceProvider =>
         {
             var configuredProvider = serviceProvider
                 .GetRequiredService<IOptions<BankAggregationProviderOptions>>()

@@ -51,6 +51,14 @@ export default async function WalletPage() {
     );
   }
 
+  const now = new Date();
+  const usablePaymentMethods = paymentMethods.filter(
+    (method) =>
+      method.status === 'active' &&
+      (method.expiryYear > now.getFullYear() ||
+        (method.expiryYear === now.getFullYear() && method.expiryMonth >= now.getMonth() + 1))
+  );
+
   return (
     <section className="kape-page wallet-page">
       <header className="kape-page-header">
@@ -76,8 +84,8 @@ export default async function WalletPage() {
         </div>
         <div className="wallet-hero__meta">
           <div>
-            <span>Funding sources</span>
-            <strong>{paymentMethods.length + linkedAccounts.length}</strong>
+            <span>Usable funding sources</span>
+            <strong>{usablePaymentMethods.length + linkedAccounts.length}</strong>
           </div>
           <div>
             <span>Wallet activity</span>
@@ -96,8 +104,8 @@ export default async function WalletPage() {
         <article>
           <div className="wallet-metric__icon"><ArrowDownToLine size={18} /></div>
           <span>Top-up ready</span>
-          <strong>{paymentMethods.length ? 'Card enabled' : 'Add a card'}</strong>
-          <small>{paymentMethods.length} tokenised payment method{paymentMethods.length === 1 ? '' : 's'}</small>
+          <strong>{usablePaymentMethods.length ? 'Card enabled' : 'Add a card'}</strong>
+          <small>{usablePaymentMethods.length} active payment method{usablePaymentMethods.length === 1 ? '' : 's'}</small>
         </article>
         <article>
           <div className="wallet-metric__icon"><Landmark size={18} /></div>

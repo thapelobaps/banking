@@ -6,6 +6,8 @@ namespace Kape.Api.Services;
 
 public sealed class DemoBankAggregationProvider : IBankAggregationProvider
 {
+    private const string InstitutionMarker = "|institution=";
+
     public string ProviderId => "demo-bank-aggregator";
 
     public Task<BankProviderLinkSession> CreateLinkSessionAsync(
@@ -34,20 +36,13 @@ public sealed class DemoBankAggregationProvider : IBankAggregationProvider
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var institutionId = string.IsNullOrWhiteSpace(state) ? "capitec" : state.Trim().ToLowerInvariant();
-        var institutionName = institutionId switch
-        {
-            "standard-bank" => "Standard Bank",
-            "fnb" => "FNB",
-            "absa" => "Absa",
-            "nedbank" => "Nedbank",
-            _ => "Capitec",
-        };
+        var institution = ResolveInstitution(state);
+        var baseConnectionId = $"demo-connection-{userId:N}-{authorizationCode.GetHashCode(StringComparison.Ordinal):X8}";
 
         return Task.FromResult(new BankProviderConnectionResult(
-            $"demo-connection-{userId:N}-{authorizationCode.GetHashCode(StringComparison.Ordinal):X8}",
-            institutionId,
-            institutionName,
+            $"{baseConnectionId}{InstitutionMarker}{institution.Id}",
+            institution.Id,
+            institution.Name,
             DateTimeOffset.UtcNow.AddDays(90)));
     }
 
@@ -56,45 +51,39 @@ public sealed class DemoBankAggregationProvider : IBankAggregationProvider
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var suffix = Math.Abs(externalConnectionId.GetHashCode(StringComparison.Ordinal));
-        var capitecAccountId = $"linked-capitec-{suffix}";
-        var standardAccountId = $"linked-standard-{suffix}";
+        var (baseConnectionId, institutionId) = ParseConnectionId(externalConnectionId);
+        var institution = ResolveInstitution(institutionId);
+        var connectionHash = baseConnectionId.GetHashCode(StringComparison.Ordinal);
+        var suffix = connectionHash == int.MinValue ? int.MaxValue : Math.Abs(connectionHash);
+        var accountSuffix = institution.Id == "standard-bank" ? "standard" : institution.Id;
+        var accountId = $"linked-{accountSuffix}-{suffix}";
+        var accountMask = (1000 + suffix % 9000).ToString("D4");
         var now = DateTimeOffset.UtcNow;
 
         IReadOnlyList<ProviderLinkedAccount> accounts =
         [
             new(
-                capitecAccountId,
-                "Capitec",
-                "Global One",
-                "transaction",
-                (1000 + suffix % 9000).ToString("D4"),
+                accountId,
+                institution.Name,
+                institution.AccountName,
+                institution.AccountType,
+                accountMask,
                 "ZAR",
-                18_684m,
-                18_200m),
-            new(
-                standardAccountId,
-                "Standard Bank",
-                "MyMo Plus",
-                "savings",
-                (1000 + (suffix / 7) % 9000).ToString("D4"),
-                "ZAR",
-                7_500m,
-                7_500m),
+                institution.CurrentBalance,
+                institution.AvailableBalance),
         ];
 
         IReadOnlyList<ProviderLinkedTransaction> transactions =
         [
-            new(capitecAccountId, $"salary-{suffix}", "Salary payment", "Employer", 24_500m, "credit", "Income", "posted", now.AddDays(-5)),
-            new(capitecAccountId, $"groceries-{suffix}", "Pick n Pay groceries", "Pick n Pay", 786.45m, "debit", "Groceries", "posted", now.AddDays(-3)),
-            new(capitecAccountId, $"netflix-{suffix}", "Netflix subscription", "Netflix", 199m, "debit", "Entertainment", "posted", now.AddDays(-2)),
-            new(standardAccountId, $"savings-{suffix}", "Monthly savings contribution", null, 1_250m, "credit", "Savings", "posted", now.AddDays(-1)),
+            new(accountId, $"salary-{suffix}", "Salary payment", "Employer", institution.SalaryAmount, "credit", "Income", "posted", now.AddDays(-5)),
+            new(accountId, $"groceries-{suffix}", "Pick n Pay groceries", "Pick n Pay", 786.45m, "debit", "Groceries", "posted", now.AddDays(-3)),
+            new(accountId, $"subscription-{suffix}", "Netflix subscription", "Netflix", 199m, "debit", "Entertainment", "posted", now.AddDays(-2)),
         ];
 
         IReadOnlyList<ProviderDebitOrder> debitOrders =
         [
-            new(capitecAccountId, $"vodacom-{suffix}", "Vodacom", 599m, "monthly", "active", now.AddDays(12), now.AddDays(-18)),
-            new(capitecAccountId, $"netflix-do-{suffix}", "Netflix", 199m, "monthly", "active", now.AddDays(6), now.AddDays(-24)),
+            new(accountId, $"vodacom-{suffix}", "Vodacom", 599m, "monthly", "active", now.AddDays(12), now.AddDays(-18)),
+            new(accountId, $"netflix-do-{suffix}", "Netflix", 199m, "monthly", "active", now.AddDays(6), now.AddDays(-24)),
         ];
 
         return Task.FromResult(new BankProviderSyncResult(accounts, transactions, debitOrders));
@@ -107,6 +96,37 @@ public sealed class DemoBankAggregationProvider : IBankAggregationProvider
         cancellationToken.ThrowIfCancellationRequested();
         return Task.CompletedTask;
     }
+
+    private static (string BaseConnectionId, string InstitutionId) ParseConnectionId(string externalConnectionId)
+    {
+        var markerIndex = externalConnectionId.LastIndexOf(InstitutionMarker, StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0)
+        {
+            return (externalConnectionId, "capitec");
+        }
+
+        var institutionId = externalConnectionId[(markerIndex + InstitutionMarker.Length)..];
+        return (externalConnectionId[..markerIndex], ResolveInstitution(institutionId).Id);
+    }
+
+    private static DemoInstitution ResolveInstitution(string? institutionId) =>
+        institutionId?.Trim().ToLowerInvariant() switch
+        {
+            "standard-bank" => new("standard-bank", "Standard Bank", "MyMo Plus", "transaction", 7_500m, 7_500m, 18_500m),
+            "fnb" => new("fnb", "FNB", "Easy Zero", "transaction", 12_840m, 12_540m, 22_000m),
+            "absa" => new("absa", "Absa", "Transact Account", "transaction", 9_320m, 8_920m, 19_750m),
+            "nedbank" => new("nedbank", "Nedbank", "MiGoals", "transaction", 15_680m, 15_180m, 23_400m),
+            _ => new("capitec", "Capitec", "Global One", "transaction", 18_684m, 18_200m, 24_500m),
+        };
+
+    private sealed record DemoInstitution(
+        string Id,
+        string Name,
+        string AccountName,
+        string AccountType,
+        decimal CurrentBalance,
+        decimal AvailableBalance,
+        decimal SalaryAmount);
 }
 
 public sealed class DemoPaymentTokenizationProvider : IPaymentTokenizationProvider

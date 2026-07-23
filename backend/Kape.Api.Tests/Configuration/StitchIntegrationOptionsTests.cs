@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Kape.Api.Configuration;
 using Xunit;
 
@@ -12,6 +13,7 @@ public sealed class StitchIntegrationOptionsTests
 
         Assert.False(options.Enabled);
         Assert.False(options.HasRequiredCredentials);
+        Assert.False(options.HasValidStorageEncryptionKey);
         Assert.True(options.HasRequiredUserScopes);
         Assert.Equal("https://secure.stitch.money/connect/authorize", options.AuthorizationEndpoint);
         Assert.Equal("https://secure.stitch.money/connect/token", options.TokenEndpoint);
@@ -36,6 +38,23 @@ public sealed class StitchIntegrationOptionsTests
         options.RedirectUri = "/relative/callback";
 
         Assert.False(options.HasRequiredCredentials);
+    }
+
+    [Fact]
+    public void StorageKey_RequiresExactly256BitsEncodedAsBase64()
+    {
+        var options = new StitchIntegrationOptions
+        {
+            StorageEncryptionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
+        };
+
+        Assert.True(options.HasValidStorageEncryptionKey);
+
+        options.StorageEncryptionKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+        Assert.False(options.HasValidStorageEncryptionKey);
+
+        options.StorageEncryptionKey = "not-base64";
+        Assert.False(options.HasValidStorageEncryptionKey);
     }
 
     [Fact]

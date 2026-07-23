@@ -5,17 +5,34 @@ namespace Kape.Api.Tests.Services;
 
 public sealed class WalletPlatformProviderTests
 {
-    [Fact]
-    public async Task BankProviderSync_ReturnsAccountsTransactionsAndDebitOrders()
+    [Theory]
+    [InlineData("capitec", "Capitec", "Global One")]
+    [InlineData("standard-bank", "Standard Bank", "MyMo Plus")]
+    [InlineData("fnb", "FNB", "Easy Zero")]
+    [InlineData("absa", "Absa", "Transact Account")]
+    [InlineData("nedbank", "Nedbank", "MiGoals")]
+    public async Task BankProviderSync_ReturnsOnlySelectedInstitution(
+        string institutionId,
+        string institutionName,
+        string accountName)
     {
         var provider = new DemoBankAggregationProvider();
+        var connection = await provider.CompleteLinkAsync(
+            Guid.NewGuid(),
+            $"demo-{institutionId}",
+            institutionId,
+            CancellationToken.None);
 
-        var result = await provider.SyncAsync("demo-connection-test", CancellationToken.None);
+        var result = await provider.SyncAsync(connection.ExternalConnectionId, CancellationToken.None);
 
-        Assert.Equal(2, result.Accounts.Count);
+        var account = Assert.Single(result.Accounts);
+        Assert.Equal(institutionName, account.InstitutionName);
+        Assert.Equal(accountName, account.AccountName);
+        Assert.Equal("ZAR", account.Currency);
         Assert.NotEmpty(result.Transactions);
         Assert.NotEmpty(result.DebitOrders);
-        Assert.All(result.Accounts, account => Assert.Equal("ZAR", account.Currency));
+        Assert.All(result.Transactions, transaction => Assert.Equal(account.ExternalAccountId, transaction.ExternalAccountId));
+        Assert.All(result.DebitOrders, debitOrder => Assert.Equal(account.ExternalAccountId, debitOrder.ExternalAccountId));
     }
 
     [Fact]
