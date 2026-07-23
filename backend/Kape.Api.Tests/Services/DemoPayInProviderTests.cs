@@ -28,7 +28,21 @@ public sealed class DemoPayInProviderTests
         Assert.StartsWith("demo_payin_", session.ExternalPaymentId);
         Assert.Equal(expectedStatus, session.Status);
         Assert.Equal(expectedFailureCode, session.FailureCode);
+        Assert.NotNull(session.RedirectUrl);
         Assert.Contains(session.ExternalPaymentId, session.RedirectUrl, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreatePayment_IsIdempotentForSameProviderKey()
+    {
+        var provider = new DemoPayInProvider();
+        var request = CreateRequest("success", "pay-order-1");
+
+        var first = await provider.CreatePaymentAsync(request, CancellationToken.None);
+        var second = await provider.CreatePaymentAsync(request, CancellationToken.None);
+
+        Assert.Equal(first.ExternalPaymentId, second.ExternalPaymentId);
+        Assert.Equal(first.Status, second.Status);
     }
 
     [Fact]
@@ -72,7 +86,9 @@ public sealed class DemoPayInProviderTests
             CancellationToken.None));
     }
 
-    private static PayInProviderRequest CreateRequest(string scenario) =>
+    private static PayInProviderRequest CreateRequest(
+        string scenario,
+        string? idempotencyKey = null) =>
         new(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -82,5 +98,6 @@ public sealed class DemoPayInProviderTests
             "ZAR",
             "PnP demo voucher",
             scenario,
+            idempotencyKey ?? Guid.NewGuid().ToString("N"),
             "https://kape.example/payments/return");
 }
