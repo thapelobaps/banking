@@ -106,6 +106,59 @@ public interface IPaymentTokenizationProvider
         CancellationToken cancellationToken);
 }
 
+public sealed record PayInProviderRequest(
+    Guid UserId,
+    Guid LinkedBankAccountId,
+    string OrderType,
+    Guid OrderId,
+    decimal Amount,
+    string Currency,
+    string Reference,
+    string Scenario,
+    string? ReturnUrl);
+
+public sealed record PayInProviderSession(
+    string ProviderId,
+    string ExternalPaymentId,
+    string Status,
+    string? RedirectUrl,
+    DateTimeOffset ExpiresAt,
+    DateTimeOffset? CompletedAt,
+    string? FailureCode);
+
+public sealed record PayInProviderRefundRequest(
+    string ExternalPaymentId,
+    decimal Amount,
+    string Currency,
+    string Reason,
+    string IdempotencyKey);
+
+public sealed record PayInProviderRefundResult(
+    string ProviderId,
+    string ExternalRefundId,
+    string ExternalPaymentId,
+    decimal Amount,
+    string Currency,
+    string Status,
+    DateTimeOffset CreatedAt);
+
+public interface IPayInProvider
+{
+    string ProviderId { get; }
+
+    Task<PayInProviderSession> CreatePaymentAsync(
+        PayInProviderRequest request,
+        CancellationToken cancellationToken);
+
+    Task<PayInProviderSession> GetPaymentAsync(
+        string externalPaymentId,
+        CancellationToken cancellationToken);
+
+    Task<PayInProviderRefundResult> RefundAsync(
+        PayInProviderRefundRequest request,
+        CancellationToken cancellationToken);
+}
+
 public sealed record DigitalFulfilmentResult(
     string ExternalOrderId,
     string FulfilmentReference,
