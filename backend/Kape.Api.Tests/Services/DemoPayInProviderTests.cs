@@ -45,6 +45,29 @@ public sealed class DemoPayInProviderTests
         Assert.Equal(first.Status, second.Status);
     }
 
+    [Theory]
+    [InlineData("success", "completed")]
+    [InlineData("pending", "pending")]
+    [InlineData("failed", "failed")]
+    [InlineData("insufficient_funds", "failed")]
+    public async Task GetPayment_ReconstructsStatusAfterProviderRestart(
+        string scenario,
+        string expectedStatus)
+    {
+        var firstProvider = new DemoPayInProvider();
+        var created = await firstProvider.CreatePaymentAsync(
+            CreateRequest(scenario),
+            CancellationToken.None);
+        var restartedProvider = new DemoPayInProvider();
+
+        var recovered = await restartedProvider.GetPaymentAsync(
+            created.ExternalPaymentId,
+            CancellationToken.None);
+
+        Assert.Equal(created.ExternalPaymentId, recovered.ExternalPaymentId);
+        Assert.Equal(expectedStatus, recovered.Status);
+    }
+
     [Fact]
     public async Task Refund_IsIdempotentAndUpdatesPaymentStatus()
     {
@@ -66,6 +89,28 @@ public sealed class DemoPayInProviderTests
         Assert.Equal(first.ExternalRefundId, second.ExternalRefundId);
         Assert.Equal("completed", first.Status);
         Assert.Equal("refunded", updatedPayment.Status);
+    }
+
+    [Fact]
+    public async Task Refund_CanRecoverCompletedPaymentAfterProviderRestart()
+    {
+        var firstProvider = new DemoPayInProvider();
+        var payment = await firstProvider.CreatePaymentAsync(
+            CreateRequest("success"),
+            CancellationToken.None);
+        var restartedProvider = new DemoPayInProvider();
+
+        var refund = await restartedProvider.RefundAsync(
+            new PayInProviderRefundRequest(
+                payment.ExternalPaymentId,
+                400m,
+                "ZAR",
+                "Restart-safe refund",
+                "refund-after-restart"),
+            CancellationToken.None);
+
+        Assert.Equal("completed", refund.Status);
+        Assert.Equal(payment.ExternalPaymentId, refund.ExternalPaymentId);
     }
 
     [Fact]
