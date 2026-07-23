@@ -5,14 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 import { ApiError, apiRequest } from '@/lib/api/client';
-import type { ActionResult, WalletTransaction } from '@/types/wallet';
-
-type WalletPurchaseReversal = {
-  originalTransactionId: string;
-  reversal: WalletTransaction;
-  status: string;
-  reversedAt: string;
-};
+import type { PaymentAttempt } from '@/types/kape-pay';
+import type { ActionResult } from '@/types/wallet';
 
 const ACCESS_TOKEN_COOKIE = 'kape-access-token';
 
@@ -21,16 +15,16 @@ const getErrorMessage = (error: unknown) => {
   return 'The wallet purchase could not be reversed.';
 };
 
-export async function reverseWalletPurchase(
-  walletTransactionId: string,
+export async function reverseWalletPayment(
+  paymentAttemptId: string,
   reason: string
-): Promise<ActionResult<WalletPurchaseReversal>> {
+): Promise<ActionResult<PaymentAttempt>> {
   try {
     const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
     if (!accessToken) throw new Error('Your session has expired. Sign in again to continue.');
 
-    const result = await apiRequest<WalletPurchaseReversal>(
-      `/api/wallet/transactions/${encodeURIComponent(walletTransactionId)}/reversals`,
+    const result = await apiRequest<PaymentAttempt>(
+      `/api/kape-pay/payments/${encodeURIComponent(paymentAttemptId)}/wallet-reversal`,
       {
         method: 'POST',
         body: JSON.stringify({
