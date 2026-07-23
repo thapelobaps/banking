@@ -153,6 +153,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITransferService, TransferService>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IWalletPlatformService, WalletPlatformService>();
+        services.AddScoped<IKapePayService, KapePayService>();
         services.AddScoped<IWalletQueue, SqlWalletQueue>();
         services.AddSingleton<IWalletCache, MemoryWalletCache>();
         services.AddSingleton<IVoucherCodeProtector, DataProtectionVoucherCodeProtector>();
@@ -188,6 +189,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDigitalProductProvider, DemoDigitalProductProvider>();
 
         services.AddHostedService<WalletQueueWorker>();
+        services.AddHostedService<KapePayQueueWorker>();
     }
 
     private static StitchBankAggregationProvider ResolveStitchProvider(IServiceProvider serviceProvider)
