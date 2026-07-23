@@ -1,0 +1,140 @@
+using System.Collections.Concurrent;
+using Kape.Api.Services.Interfaces;
+
+namespace Kape.Api.Services;
+
+public sealed class DemoPayInProvider : IPayInProvider
+{
+    private readonly ConcurrentDictionary<string, PayInProviderSession> _payments = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, PayInProviderRefundResult> _refunds = new(StringComparer.Ordinal);
+
+    public string ProviderId => "demo-pay-by-bank";
+
+    public Task<PayInProviderSession> CreatePaymentAsync(
+        PayInProviderRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (request.Amount <= 0m || decimal.Round(request.Amount, 2) != request.Amount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "The payment amount must be positive with no more than two decimal places.");
+        }
+
+        var externalPaymentId = $"demo_payin_{Guid.NewGuid():N}";
+        var scenario = NormaliseScenario(request.Scenario);
+        var now = DateTimeOffset.UtcNow;
+        var (status, failureCode, completedAt) = scenario switch
+        {
+            "success" => ("completed", (string?)null, (DateTimeOffset?)now),
+            "pending" => ("pending", null, null),
+            "cancelled" => ("cancelled", "customer_cancelled", now),
+            "failed" => ("failed", "demo_declined", now),
+            "insufficient_funds" => ("failed", "insufficient_funds", now),
+            _ => ("awaiting_approval", null, null),
+        };
+
+        var redirectUrl = BuildRedirectUrl(request.ReturnUrl, externalPaymentId, scenario);
+        var session = new PayInProviderSession(
+            ProviderId,
+            externalPaymentId,
+            status,
+            redirectUrl,
+            now.AddMinutes(15),
+            completedAt,
+            failureCode);
+
+        _payments[externalPaymentId] = session;
+        return Task.FromResult(session);
+    }
+
+    public Task<PayInProviderSession> GetPaymentAsync(
+        string externalPaymentId,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_payments.TryGetValue(externalPaymentId.Trim(), out var session))
+        {
+            throw new KeyNotFoundException("The demo payment could not be found.");
+        }
+
+        return Task.FromResult(session);
+    }
+
+    public Task<PayInProviderRefundResult> RefundAsync(
+        PayInProviderRefundRequest request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_payments.TryGetValue(request.ExternalPaymentId.Trim(), out var payment))
+        {
+            throw new KeyNotFoundException("The demo payment could not be found.");
+        }
+
+        if (payment.Status is not ("completed" or "refunded"))
+        {
+            throw new InvalidOperationException("Only a completed demo payment can be refunded.");
+        }
+
+        if (request.Amount <= 0m || decimal.Round(request.Amount, 2) != request.Amount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), "The refund amount must be positive with no more than two decimal places.");
+        }
+
+        var key = request.IdempotencyKey.Trim();
+        if (_refunds.TryGetValue(key, out var existing))
+        {
+            return Task.FromResult(existing);
+        }
+
+        var createdAt = DateTimeOffset.UtcNow;
+        var result = new PayInProviderRefundResult(
+            ProviderId,
+            $"demo_refund_{Guid.NewGuid():N}",
+            payment.ExternalPaymentId,
+            request.Amount,
+            request.Currency,
+            "completed",
+            createdAt);
+
+        _refunds[key] = result;
+        _payments[payment.ExternalPaymentId] = payment with
+        {
+            Status = "refunded",
+            CompletedAt = createdAt,
+            FailureCode = null,
+        };
+
+        return Task.FromResult(result);
+    }
+
+    private static string NormaliseScenario(string? scenario) =>
+        string.IsNullOrWhiteSpace(scenario)
+            ? "awaiting_approval"
+            : scenario.Trim().ToLowerInvariant() switch
+            {
+                "approved" or "completed" or "success" => "success",
+                "processing" or "pending" => "pending",
+                "cancelled" or "canceled" => "cancelled",
+                "insufficient" or "insufficient_funds" => "insufficient_funds",
+                "declined" or "failed" => "failed",
+                _ => "awaiting_approval",
+            };
+
+    private static string? BuildRedirectUrl(
+        string? returnUrl,
+        string externalPaymentId,
+        string scenario)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl) ||
+            !Uri.TryCreate(returnUrl.Trim(), UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        var separator = string.IsNullOrWhiteSpace(uri.Query) ? "?" : "&";
+        return $"{uri}{separator}demoPayment={Uri.EscapeDataString(externalPaymentId)}&scenario={Uri.EscapeDataString(scenario)}";
+    }
+}
