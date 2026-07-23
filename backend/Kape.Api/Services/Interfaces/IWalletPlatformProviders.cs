@@ -115,6 +115,7 @@ public sealed record PayInProviderRequest(
     string Currency,
     string Reference,
     string Scenario,
+    string IdempotencyKey,
     string? ReturnUrl);
 
 public sealed record PayInProviderSession(
