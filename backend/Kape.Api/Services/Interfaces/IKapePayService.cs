@@ -57,6 +57,12 @@ public interface IKapePayService
         CreatePaymentRefundRequestDto request,
         CancellationToken cancellationToken);
 
+    Task<PaymentAttemptResponseDto> ReverseWalletPaymentAsync(
+        Guid userId,
+        Guid paymentAttemptId,
+        CreateWalletPurchaseReversalRequestDto request,
+        CancellationToken cancellationToken);
+
     Task<PaymentReconciliationResponseDto> ReconcileAsync(
         Guid userId,
         CancellationToken cancellationToken);
