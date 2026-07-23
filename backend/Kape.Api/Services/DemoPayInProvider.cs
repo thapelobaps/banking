@@ -6,6 +6,7 @@ namespace Kape.Api.Services;
 public sealed class DemoPayInProvider : IPayInProvider
 {
     private readonly ConcurrentDictionary<string, PayInProviderSession> _payments = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, PayInProviderSession> _paymentRequests = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, PayInProviderRefundResult> _refunds = new(StringComparer.Ordinal);
 
     public string ProviderId => "demo-pay-by-bank";
@@ -19,6 +20,17 @@ public sealed class DemoPayInProvider : IPayInProvider
         if (request.Amount <= 0m || decimal.Round(request.Amount, 2) != request.Amount)
         {
             throw new ArgumentOutOfRangeException(nameof(request), "The payment amount must be positive with no more than two decimal places.");
+        }
+
+        var idempotencyKey = request.IdempotencyKey.Trim();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            throw new ArgumentException("A provider idempotency key is required.", nameof(request));
+        }
+
+        if (_paymentRequests.TryGetValue(idempotencyKey, out var existing))
+        {
+            return Task.FromResult(existing);
         }
 
         var externalPaymentId = $"demo_payin_{Guid.NewGuid():N}";
@@ -45,6 +57,7 @@ public sealed class DemoPayInProvider : IPayInProvider
             failureCode);
 
         _payments[externalPaymentId] = session;
+        _paymentRequests[idempotencyKey] = session;
         return Task.FromResult(session);
     }
 
