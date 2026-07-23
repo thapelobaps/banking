@@ -184,6 +184,7 @@ public static class ServiceCollectionExtensions
             };
         });
         services.AddSingleton<IPaymentTokenizationProvider, DemoPaymentTokenizationProvider>();
+        services.AddSingleton<IPayInProvider, DemoPayInProvider>();
         services.AddSingleton<IDigitalProductProvider, DemoDigitalProductProvider>();
 
         services.AddHostedService<WalletQueueWorker>();
