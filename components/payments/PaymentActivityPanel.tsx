@@ -9,7 +9,7 @@ import {
   refreshKapePayPayment,
   refundKapePayPayment,
 } from '@/lib/actions/kape-pay.actions';
-import { reverseWalletPurchase } from '@/lib/actions/wallet-reversal.actions';
+import { reverseWalletPayment } from '@/lib/actions/wallet-reversal.actions';
 import { formatAmount } from '@/lib/utils';
 import type { PaymentAttempt, PaymentReconciliation } from '@/types/kape-pay';
 
@@ -80,16 +80,14 @@ export default function PaymentActivityPanel({ initialPayments }: { initialPayme
     setActiveAction(`reverse:${payment.id}`);
     setError(null);
     startTransition(() => {
-      void reverseWalletPurchase(payment.walletTransactionId!, 'Demonstration fulfilment reversal').then((result) => {
+      void reverseWalletPayment(payment.id, 'Demonstration fulfilment reversal').then((result) => {
         setActiveAction(null);
         if (!result.ok) {
           setError(result.error);
           return;
         }
-        setPayments((current) => current.map((item) => (
-          item.id === payment.id ? { ...item, status: 'reversed' } : item
-        )));
-        setMessage(`Wallet reversal ${result.data.reversal.externalReference ?? result.data.reversal.id} completed.`);
+        updatePayment(result.data);
+        setMessage(`Wallet payment ${result.data.externalPaymentId} is now reversed.`);
         router.refresh();
       });
     });
